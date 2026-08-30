@@ -538,7 +538,8 @@ function scopeLine(t){
   var f=(t.from||"").trim(), to=(t.to||"").trim();
   if(!f && !to) return "";
   if(f && to) return "Layers: From "+f+" to "+to;
-  return "Layers: "+(f||to);
+  if(f) return "Layers: From "+f;
+  return "Layers: to "+to;
 }
 function taskToText(t){
   var L=[], pairs=(t.pairs&&t.pairs.length)?t.pairs:[{part:"",wo:""}];
@@ -764,20 +765,24 @@ function downloadFile(name, content, type){
 /* ---------- import parser ---------- */
 /* يقرأ النص الملصوق بأي ترتيب أو تباعد، ويقسّمه إلى نفس بنية التاسك الأساسية */
 var RE={
-  part  : /^(?:part\s*(?:numbers?|no\.?|num|#)?|p\s*\/\s*n|pn(?=\s*[:\-]))\s*[:؛،\-–]?\s*(.*)$/i,
-  wo    : /^(?:work\s*orders?(?:\s*(?:number|no\.?|#))?|w\s*\/\s*o|wo(?=\s*[:\-])|أمر\s*(?:الشغل|العمل)|امر\s*(?:الشغل|العمل))\s*[:؛،\-–]?\s*(.*)$/i,
-  partAr: /^(?:رقم\s*(?:ال)?قطعة|القطعة)\s*[:،\-–]?\s*(.*)$/,
-  date  : /^(?:date|day|التاريخ|تاريخ|اليوم)\s*[:،\-–]?\s*(.*)$/i,
-  start : /^(?:start(?:\s*time)?|begin|البداية|بداية|بدء|من\s*الساعة)\s*[:،\-–]?\s*(.*)$/i,
-  stop  : /^(?:stop(?:\s*time)?|end(?:\s*time)?|finish|النهاية|نهاية|انتهاء|إلى\s*الساعة|الى\s*الساعة)\s*[:،\-–]?\s*(.*)$/i,
-  layers: /^(?:layers?|plies|ply|الطبقات|طبقات|طبقة)\s*[:،\-–]?\s*(.*)$/i,
+  part  : /^(?:part\s*(?:numbers?|no\.?|num|#)?|p\s*\/\s*n|pn(?=\s*[:\-]))(?![A-Za-z])\s*[:؛،\-–]?\s*(.*)$/i,
+  wo    : /^(?:work\s*orders?(?:\s*(?:number|no\.?|#))?|w\s*\/\s*o|wo(?=\s*[:\-])|(?:رقم\s*)?أمر\s*(?:الشغل|العمل)|(?:رقم\s*)?امر\s*(?:الشغل|العمل))(?![A-Za-z])\s*[:؛،\-–]?\s*(.*)$/i,
+  partAr: /^رقم\s*(?:ال)?(?:بارت|قطعة|قطعه)\s*[:،\-–]?\s*(.*)$/,
+  name  : /^(?:اسم|الاسم|الفني|name|technician|operator)\s*[:،\-–]\s*/i,
+  lastPly:/^(?:رقم\s*)?(?:آخر|اخر|last)\s*(?:ال)?(?:ply|طبقة|layer)\s*[:،\-–]?\s*/i,
+  date  : /^(?:date|day|التاريخ|تاريخ|اليوم)(?![A-Za-z])\s*[:،\-–]?\s*(.*)$/i,
+  start : /^(?:start(?:ing)?(?:\s*time)?|begin|البداية|بداية|بدء|وقت\s*البدء|من\s*الساعة)\s*[:،\-–]?\s*(.*)$/i,
+  stop  : /^(?:stop|end|finish(?:ed)?)(?:\s*time)?\s*[:،\-–]?\s*(.*)$|^(?:النهاية|نهاية|انتهاء|وقت\s*الانتهاء|إلى\s*الساعة|الى\s*الساعة)\s*[:،\-–]?\s*(.*)$/i,
+  fromLay:/^(?:from|start(?:ing)?|beginning)\s*(?:the\s*)?(?:layer|ply)s?\s*[:،\-–]?\s*(.*)$|^بداية\s*(?:العمل)?[^:]*?(?:ply|layer|طبقة)\s*[:،\-–]?\s*(.*)$/i,
+  toLay  :/^(?:to|till|until|up\s*to|finish(?:ed)?|final|end(?:ing)?|last)\s*(?:the\s*)?(?:layer|ply)s?\s*[:،\-–]?\s*(.*)$|^نهاية\s*(?:العمل)?[^:]*?(?:ply|layer|طبقة)\s*[:،\-–]?\s*(.*)$/i,
+  layers: /^(?:from\s+)?(?:layers?|plies|ply|الطبقات|طبقات|طبقة)(?![A-Za-z])\s*[:،\-–]?\s*(.*)$/i,
   final : /^(?:final\s*bag|finalbag|f\s*\/?\s*b|الكيس\s*النهائي|كيس\s*نهائي)\s*$/i,
   rebag : /^(?:re\s*-?\s*bag|إعادة\s*تكييس|اعادة\s*تكييس)\s*$/i,
   range : /^(?:from\s+)?(\d[\w.\-\/]*)\s+(?:to|→|=>|حتى|إلى|الى)\s+(.+)$/i,
-  sep   : /^[-=_*.·•–—\s]{3,}$/
+  sep   : /^[-=_*.·•–—\s]+$/
 };
 /* أسطر قد تحمل أكثر من حقل: "Start 15:00 Stop:20:30" */
-var SPLIT=/\s+(?=(?:part\s*number|work\s*order|p\s*\/\s*n|w\s*\/\s*o|date|start|stop|layers?)\b\s*:?\s*\S)/i;
+var SPLIT=/\s+(?=(?:part\s*number|work\s*order|p\s*\/\s*n|w\s*\/\s*o|date|start\s*time|stop|finish(?:ed)?\s*time)\b\s*:?\s*\S)/i;
 
 function prepLines(txt){
   var out=[];
@@ -792,14 +797,21 @@ function prepLines(txt){
   return out;
 }
 function cleanVal(v){
-  v=String(v==null?"":v).trim().replace(/^[:،\-–\s]+/,"").trim();
+  v=String(v==null?"":v).trim().replace(/^[:،\-–\s]+/,"").replace(/[:،\s]+$/,"").trim();
+  var m=/^\((.+)\)$/.exec(v);              /* رقم البارت (153302919): */
+  if(m) v=m[1].trim();
   if(/^[\d\s]+$/.test(v)) v=v.replace(/\s+/g,"");
   return v;
+}
+function firstVal(m){                       /* أول مجموعة غير فارغة في regex متعدد الفروع */
+  for(var i=1;i<m.length;i++) if(m[i]!=null) return m[i];
+  return "";
 }
 function parseInput(txt){
   var recs=[], cur=null, ignored=[];
   function fresh(){ return {parts:[],wos:[],scope:"",from:"",to:"",text:"",date:"",start:"",stop:"",notes:[]}; }
   function timed(r){ return !!(r && (r.date||r.start||r.stop)); }
+  function identified(r){ return !!(r && (r.parts.length||r.wos.length||r.scope)); }
   function notesOnly(r){ return !!(r && r.notes.length && !r.parts.length && !r.wos.length && !r.scope); }
   function flush(){
     if(cur){
@@ -811,42 +823,32 @@ function parseInput(txt){
   function need(){ if(!cur) cur=fresh(); return cur; }
 
   prepLines(txt).forEach(function(line){
-    var m;
-    if(line===""){ if(timed(cur)) flush(); return; }
+    var m, v;
+    if(line===""){ return; }                       /* الأسطر الفارغة لا تفصل: قد تكون داخل التاسك */
     if(RE.sep.test(line)){ flush(); return; }
+    if(RE.name.test(line)){ flush(); return; }     /* سطر الاسم: بداية تاسك جديد ويُتجاهل */
+    if(RE.lastPly.test(line)){ return; }           /* رقم آخر Ply: يُتجاهل */
 
     if((m=RE.part.exec(line)) || (m=RE.partAr.exec(line))){
-      if(timed(cur) || notesOnly(cur)) flush();
+      if(identified(cur) && timed(cur)) flush(); else if(notesOnly(cur)) flush();
       need().parts.push(cleanVal(m[1])); return;
     }
     if((m=RE.wo.exec(line))){
-      if(timed(cur) || notesOnly(cur)) flush();
+      /* أمر الشغل يتبع رقم القطعة: لا يبدأ تاسكاً جديداً وهناك رقم قطعة ينتظر أمره */
+      if(identified(cur) && timed(cur) && cur.wos.length>=cur.parts.length) flush();
+      else if(notesOnly(cur)) flush();
       need().wos.push(cleanVal(m[1])); return;
     }
-    if((m=RE.date.exec(line))){
-      var d=parseDate(m[1]);
-      if(cur && cur.date) flush();
-      if(d) need().date=d; else need().notes.push(line);
-      return;
-    }
-    if((m=RE.start.exec(line))){
-      var st=parseTime(m[1]);
-      if(cur && cur.start) flush();
-      if(st) need().start=st; else need().notes.push(line);
-      return;
-    }
-    if((m=RE.stop.exec(line))){
-      var sp=parseTime(m[1]);
-      if(cur && cur.stop) flush();
-      if(sp) need().stop=sp; else need().notes.push(line);
-      return;
-    }
-    if(RE.final.test(line)){ if(timed(cur)) flush(); setScopeOn(need(),"final","",""); return; }
-    if(RE.rebag.test(line)){ if(timed(cur)) flush(); setScopeOn(need(),"rebag","",""); return; }
+    /* حدود الطبقات قبل الأوقات: "Start layer" ليست "Start time" */
+    if((m=RE.fromLay.exec(line))){ setEdge("from", firstVal(m)); return; }
+    if((m=RE.toLay.exec(line))){   setEdge("to",   firstVal(m)); return; }
+
+    if(RE.final.test(line)){ if(cur && cur.scope && timed(cur)) flush(); setScopeOn(need(),"final","",""); return; }
+    if(RE.rebag.test(line)){ if(cur && cur.scope && timed(cur)) flush(); setScopeOn(need(),"rebag","",""); return; }
     if((m=RE.layers.exec(line))){
-      if(timed(cur)) flush();
-      var v=cleanVal(m[1]);
-      if(!v){ return; }
+      v=cleanVal(m[1]);
+      if(!v) return;
+      if(cur && cur.scope && timed(cur)) flush();
       if(RE.final.test(v)){ setScopeOn(need(),"final","",""); return; }
       if(RE.rebag.test(v)){ setScopeOn(need(),"rebag","",""); return; }
       var r=RE.range.exec(v) || /^(?:from\s+)?(.+?)\s+(?:to|→|حتى|إلى|الى)\s+(.+)$/i.exec(v);
@@ -854,14 +856,40 @@ function parseInput(txt){
       else  setScopeOn(need(),"other","","","Layers: "+v);
       return;
     }
+    if((m=RE.date.exec(line))){
+      var d=parseDate(m[1]);
+      if(d){ if(cur && cur.date) flush(); need().date=d; }
+      else need().notes.push(line);
+      return;
+    }
+    if((m=RE.start.exec(line))){
+      var st=parseTime(firstVal(m));
+      if(st){ if(cur && cur.start) flush(); need().start=st; return; }
+    }
+    if((m=RE.stop.exec(line))){
+      var sp=parseTime(firstVal(m));
+      if(sp){ if(cur && cur.stop) flush(); need().stop=sp; return; }
+    }
     if((m=RE.range.exec(line))){                 /* سطر مدى بدون كلمة Layers */
-      if(timed(cur)) flush();
+      if(cur && cur.scope && timed(cur)) flush();
       setScopeOn(need(),"layers",m[1].trim(),m[2].trim()); return;
     }
     need().notes.push(line);
   });
   flush();
 
+  function setEdge(which, val){
+    val=cleanVal(val);
+    var r;
+    if(cur && cur.scope && cur.scope!=="layers" && timed(cur)) flush();
+    if(cur && timed(cur) && ((which==="from" && cur.from) || (which==="to" && cur.to))) flush();
+    r=need();
+    if(!r.scope) r.scope="layers";
+    if(!val) return;
+    if(r.scope!=="layers"){ r.notes.push((which==="from"?"From ":"To ")+val); return; }
+    if(which==="from"){ if(!r.from) r.from=val; }
+    else { if(!r.to) r.to=val; }
+  }
   function setScopeOn(r,sc,from,to,text){
     if(r.scope){
       if(r.scope==="layers" && sc==="final" && !r.to){ r.to="final bag"; return; }
@@ -872,6 +900,10 @@ function parseInput(txt){
   }
 
   var items=recs.map(function(r){
+    if(r.scope==="layers" && r.to){                  /* "19.8, didn\u2019t found ports" */
+      var cm=/^([^,\u060C]+)[,\u060C]\s*(.*[A-Za-z\u0600-\u06FF].*)$/.exec(r.to);
+      if(cm){ r.to=cm[1].trim(); r.notes.push(cm[2].trim()); }
+    }
     var n=Math.max(r.parts.length, r.wos.length, 1), pairs=[], i;
     for(i=0;i<n;i++) pairs.push({ part:r.parts[i]||"", wo:r.wos[i]||"" });
     while(pairs.length>1 && !pairs[pairs.length-1].part && !pairs[pairs.length-1].wo) pairs.pop();
