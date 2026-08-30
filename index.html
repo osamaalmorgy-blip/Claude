@@ -340,6 +340,7 @@ textarea.in{
     <section class="pane on" id="pane-log">
       <div class="searchrow">
         <input type="text" id="search" placeholder="بحث برقم القطعة أو أمر الشغل أو الملاحظة…">
+        <button class="btn danger" type="button" id="wipe-log" hidden>حذف كل السجل</button>
       </div>
       <div id="list"></div>
     </section>
@@ -681,6 +682,7 @@ function render(){
   updateStats();
 }
 function updateStats(){
+  $("#wipe-log").hidden = !tasks.length;
   var days={}, mins=0;
   tasks.forEach(function(t){ if(t.date) days[t.date]=1; mins+=durMin(t); });
   $("#st-tasks").textContent=tasks.length;
@@ -1072,11 +1074,15 @@ $("#file").addEventListener("change",function(e){
   r.readAsText(f);
   e.target.value="";
 });
-$("#wipe").addEventListener("click",function(){
+function wipeAll(){
   if(!tasks.length){ toast("السجل فارغ أصلاً"); return; }
-  if(!confirm("سيتم حذف كل التاسكات ("+tasks.length+"). متأكد؟")) return;
-  tasks=[]; save(); resetForm(); render(); buildExport(); toast("تم مسح السجل");
-});
+  if(!confirm("سيتم حذف كل التاسكات ("+tasks.length+") نهائياً، ولا يمكن التراجع.\n"+
+              "خذ نسخة احتياطية JSON أولاً إن أردت. متأكد؟")) return;
+  tasks=[]; save(); resetForm(); $("#date").value=todayISO();
+  render(); buildExport(); previewImport(); toast("تم مسح السجل");
+}
+$("#wipe").addEventListener("click", wipeAll);
+$("#wipe-log").addEventListener("click", wipeAll);
 $("#theme").addEventListener("click",function(){
   var cur=document.documentElement.getAttribute("data-theme");
   var next = cur==="dark" ? "light" : cur==="light" ? "dark"
