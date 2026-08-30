@@ -240,7 +240,7 @@ pre.out{
 }
 @keyframes sp{to{transform:rotate(360deg)}}
 .impgrid{display:grid; grid-template-columns:1fr; gap:12px}
-@media (min-width:760px){ .impgrid{grid-template-columns:1fr 1fr} }
+@media (min-width:760px){ .impgrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
 .dayhead.undated .d{color:var(--warn)}
 .dayhead.undated .w{color:var(--warn)}
 textarea.in{
@@ -415,10 +415,18 @@ textarea.in{
               <span class="ttl">تحليل بواسطة Claude</span>
               <span class="badge" id="ai-state">غير مفعّل</span>
               <span class="grow">
-                <button class="btn" type="button" id="ai-run">حلّل النص بـ Claude</button>
+                <button class="btn" type="button" id="ai-copy">انسخ الطلب وافتح Claude</button>
+                <button class="btn ghost" type="button" id="ai-run">تحليل تلقائي بالمفتاح</button>
                 <button class="linkbtn" type="button" id="ai-toggle">الإعدادات</button>
               </span>
             </div>
+            <p class="note" id="ai-how" style="margin:10px 0 0">
+              <b>بدون أي مفتاح:</b> اضغط «انسخ الطلب وافتح Claude» ← الصق في محادثة Claude (Ctrl+V) ←
+              انسخ رده ← الصقه في مربع «النص الملصوق» هنا ← «استيراد الجديد».
+              <br>
+              <b>تلقائي:</b> الزر الثاني يرسل النص بنفسه دون مغادرة الصفحة، لكنه يحتاج مفتاح Anthropic API
+              من «الإعدادات» (اختياري تماماً).
+            </p>
             <div id="ai-settings" hidden>
               <p class="note">
                 يُرسَل النص الملصوق إلى <span dir="ltr">api.anthropic.com</span> ليفهمه Claude ويقسّمه، ثم تُعرض النتيجة
@@ -1084,6 +1092,59 @@ function askClaude(text){
     });
   }).finally(function(){ clearTimeout(timer); });
 }
+function claudePrompt(text){
+  return [
+    "قسّم سجل التاسكات التالي وأعد كتابته بهذه الصيغة بالضبط، ولا تكتب أي شيء آخر معه:",
+    "",
+    "Part number: <رقم القطعة>",
+    "Work order: <أمر الشغل>",
+    "Layers: From <البداية> to <النهاية>",
+    "Date: <يوم-شهر-سنة>",
+    "Start <HH:MM>",
+    "Stop:<HH:MM>",
+    "<الملاحظة إن وُجدت>",
+    "",
+    "القواعد:",
+    "- سطر فارغ واحد بين كل تاسك والذي يليه، ولا تضع ترقيم ولا عناوين ولا شرح.",
+    "- سطر العمل الثالث يكون: «Layers: From X to Y» للطبقات، أو «Final bag»، أو «Rebag»،",
+    "  أو «Layers: to X» إذا كانت النهاية فقط مذكورة، أو «Layers: From X» إذا كانت البداية فقط.",
+    "- التواريخ في المصدر يوم أولاً: 6/7/2026 يعني 6 يوليو، واكتبها هكذا: 6-7-2026",
+    "- الأوقات بنظام 24 ساعة: 3:00 pm تصبح 15:00، و 7:00 صباحاً تصبح 07:00",
+    "- إذا كان التاسك يحمل أكثر من رقم قطعة، كرّر سطري Part number و Work order فوق بعضهما قبل سطر العمل.",
+    "- أي كلام آخر (تأخير، حجز جودة، ملاحظة) اجعله السطر الأخير في التاسك كما هو.",
+    "- تجاهل سطر الاسم، وتجاهل «رقم آخر Ply»؛ نهاية العمل هي «نهاية العمل عند الـ Ply».",
+    "- إذا لم يذكر النص وقت انتهاء، احذف سطر Stop. ولا تخترع أي قيمة غير موجودة.",
+    "",
+    "النص:",
+    "-----",
+    text.trim(),
+    "-----"
+  ].join("\n");
+}
+function copyText(txt){
+  if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(txt);
+  return new Promise(function(resolve,reject){
+    var ta=document.createElement("textarea");
+    ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    var ok=false;
+    try{ ok=document.execCommand("copy"); }catch(e){}
+    ta.remove();
+    ok?resolve():reject(new Error("no clipboard"));
+  });
+}
+function copyForClaude(){
+  var raw=$("#imp").value;
+  if(!raw.trim()){ toast("الصق نصك في المربع أولاً"); return; }
+  copyText(claudePrompt(raw)).then(function(){
+    var w=null;
+    try{ w=window.open("https://claude.ai/new","_blank","noopener"); }catch(e){}
+    toast(w ? "تم نسخ الطلب — الصقه في Claude ثم أعد رده هنا"
+            : "تم نسخ الطلب — افتح claude.ai والصقه هناك");
+  },function(){
+    toast("تعذّر النسخ تلقائياً — انسخ النص يدوياً");
+  });
+}
 function runClaude(){
   var raw=$("#imp").value;
   if(!raw.trim()){ toast("الصق النص أولاً"); return; }
@@ -1238,6 +1299,7 @@ $("#imp").addEventListener("input",function(){
   aiTasks=null;                       /* النص تغيّر: نتيجة Claude لم تعد تخصّه */
   clearTimeout(impT); impT=setTimeout(previewImport,180);
 });
+$("#ai-copy").addEventListener("click", copyForClaude);
 $("#ai-run").addEventListener("click", runClaude);
 $("#ai-toggle").addEventListener("click",function(){
   var box=$("#ai-settings"); box.hidden=!box.hidden;
