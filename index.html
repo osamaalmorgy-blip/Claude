@@ -220,8 +220,12 @@ pre.out{
   background:var(--sunken); border:1px solid var(--line); border-radius:10px;
   padding:14px; margin:0 0 12px; max-height:460px; overflow:auto; white-space:pre; tab-size:2;
 }
+.impgrid{display:grid; grid-template-columns:1fr; gap:12px}
+@media (min-width:760px){ .impgrid{grid-template-columns:1fr 1fr} }
+.dayhead.undated .d{color:var(--warn)}
+.dayhead.undated .w{color:var(--warn)}
 textarea.in{
-  direction:ltr; text-align:left; font-family:var(--mono); font-size:12.5px; min-height:220px; resize:vertical;
+  direction:ltr; text-align:left; font-family:var(--mono); font-size:12.5px; min-height:420px; resize:vertical;
 }
 .note{font-size:12.5px; color:var(--ink-2); margin:0 0 12px}
 .toast{
@@ -366,6 +370,7 @@ textarea.in{
             <span>التاسكات: <b id="ex-count">0</b></span>
             <span>الأيام: <b id="ex-days">0</b></span>
             <span>إجمالي الوقت: <b id="ex-hours">0h</b></span>
+            <span id="ex-undated-wrap" hidden style="color:var(--warn)">بدون تاريخ (لا تُصدَّر): <b id="ex-undated">0</b></span>
           </div>
           <pre class="out" id="ex-out"></pre>
           <div class="actions">
@@ -382,12 +387,28 @@ textarea.in{
       <div class="card">
         <div class="card-head"><h2>استيراد قائمة مكتوبة</h2><span class="hint">paste &amp; parse</span></div>
         <div class="card-body">
-          <p class="note">الصق التاسكات بنفس الصيغة المعتادة (كل تاسك يفصله سطر فارغ) وسيتم تحويلها إلى سجلات قابلة للتعديل والتصدير.</p>
-          <div class="field">
-            <textarea class="in" id="imp" placeholder="Part number: 153302779&#10;Work order: 002866&#10;Layers: From 7.1 to 13.4&#10;Date: 6-7-2026&#10;Start 15:00&#10;Stop:20:30"></textarea>
+          <p class="note">الصق التاسكات بأي صيغة قريبة من المعتاد — بسطر فاصل أو بدونه، بترتيب مختلف، بأسماء حقول مختصرة
+            (<span dir="ltr">P/N · W/O · FB</span>)، بتواريخ <span dir="ltr">6-7-2026</span> أو <span dir="ltr">6/7/2026</span> أو
+            <span dir="ltr">2026-07-06</span>، وبأرقام عربية أو إنجليزية. يمين الصفحة تظهر التاسكات بعد تقسيمها، راجعها ثم استورد.</p>
+          <div class="impgrid">
+            <div class="field" style="margin:0">
+              <label class="lbl" for="imp">النص الملصوق</label>
+              <textarea class="in" id="imp" placeholder="Part number: 153302779&#10;Work order: 002866&#10;Layers: From 7.1 to 13.4&#10;Date: 6-7-2026&#10;Start 15:00&#10;Stop:20:30"></textarea>
+            </div>
+            <div class="field" style="margin:0">
+              <label class="lbl">بعد التقسيم</label>
+              <pre class="out" id="imp-out" style="max-height:420px; min-height:220px; margin:0"></pre>
+            </div>
           </div>
+          <div class="sumline" style="margin-top:12px">
+            <span>مقروء: <b id="imp-count">0</b></span>
+            <span>جديد: <b id="imp-new">0</b></span>
+            <span>مكرر: <b id="imp-dup">0</b></span>
+            <span>بدون تاريخ: <b id="imp-undated">0</b></span>
+          </div>
+          <p class="note" id="imp-ignored" hidden></p>
           <div class="actions">
-            <button class="btn" type="button" id="do-import">استيراد</button>
+            <button class="btn" type="button" id="do-import">استيراد الجديد</button>
             <button class="btn ghost" type="button" id="restore">استعادة نسخة JSON</button>
             <button class="btn danger" type="button" id="wipe" style="margin-inline-start:auto">حذف كل السجل</button>
           </div>
@@ -443,23 +464,52 @@ function fmtDur(m){
   var h=Math.floor(m/60), r=m%60;
   return (h?h+"h":"") + (r?(h?" ":"")+r+"m":"");
 }
+var AR_DIGITS={"\u0660":"0","\u0661":"1","\u0662":"2","\u0663":"3","\u0664":"4","\u0665":"5","\u0666":"6","\u0667":"7","\u0668":"8","\u0669":"9",
+  "\u06F0":"0","\u06F1":"1","\u06F2":"2","\u06F3":"3","\u06F4":"4","\u06F5":"5","\u06F6":"6","\u06F7":"7","\u06F8":"8","\u06F9":"9"};
+function normDigits(v){
+  return String(v==null?"":v).replace(/[\u0660-\u0669\u06F0-\u06F9]/g,function(c){ return AR_DIGITS[c]; });
+}
+var MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+  "يناير":1,"فبراير":2,"مارس":3,"ابريل":4,"أبريل":4,"مايو":5,"يونيو":6,"يوليو":7,"اغسطس":8,"أغسطس":8,
+  "سبتمبر":9,"اكتوبر":10,"أكتوبر":10,"نوفمبر":11,"ديسمبر":12,
+  "شباط":2,"اذار":3,"آذار":3,"نيسان":4,"ايار":5,"أيار":5,"حزيران":6,"تموز":7,"اب":8,"آب":8,"ايلول":9,"أيلول":9};
+function monthNum(w){
+  if(!w) return 0;
+  var k=String(w).toLowerCase().replace(/[.\u060C,]/g,"");
+  if(MONTHS[k]) return MONTHS[k];
+  return MONTHS[k.slice(0,3)]||0;
+}
 function parseTime(v){
   if(!v) return "";
-  var m=/(\d{1,2})\s*[:.٫]\s*(\d{1,2})/.exec(v);
-  if(m) return pad(Math.min(23,+m[1]))+":"+pad(Math.min(59,+m[2]));
-  m=/^\s*(\d{1,2})\s*$/.exec(v);
-  if(m) return pad(Math.min(23,+m[1]))+":00";
-  return "";
+  v=normDigits(v).trim();
+  var pm=/(p\.?\s*m|مساء)/i.test(v), am=/(a\.?\s*m|صباح)/i.test(v), h, mi, m;
+  if((m=/(\d{1,2})\s*[:.\u066B\u060C,]\s*(\d{1,2})/.exec(v))){ h=+m[1]; mi=+m[2]; }
+  else if((m=/^(\d{3,4})$/.exec(v))){ var t=m[1].length===3?"0"+m[1]:m[1]; h=+t.slice(0,2); mi=+t.slice(2); }
+  else if((m=/^(\d{1,2})\b/.exec(v))){ h=+m[1]; mi=0; }
+  else return "";
+  if(pm && h<12) h+=12;
+  if(am && h===12) h=0;
+  if(h>23 || mi>59) return "";
+  return pad(h)+":"+pad(mi);
 }
 function parseDate(v){
   if(!v) return "";
-  v=v.trim();
-  var m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(v);
-  if(m) return m[1]+"-"+pad(+m[2])+"-"+pad(+m[3]);
-  m=/^(\d{1,2})\s*[-\/.]\s*(\d{1,2})\s*[-\/.]\s*(\d{2,4})$/.exec(v);
-  if(m){
-    var y=+m[3]; if(y<100) y+=2000;
-    return y+"-"+pad(+m[2])+"-"+pad(+m[1]);
+  v=normDigits(v).trim().replace(/[\u060C,]/g," ").replace(/\s+/g," ");
+  var m;
+  if((m=/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/.exec(v)))
+    return m[1]+"-"+pad(+m[2])+"-"+pad(+m[3]);
+  if((m=/^(\d{1,2})\s*[-\/. ]\s*(\d{1,2})\s*[-\/. ]\s*(\d{2,4})$/.exec(v))){
+    var d=+m[1], mo=+m[2], y=+m[3];
+    if(y<100) y+=2000;
+    if(mo>12 && d<=12){ var sw=d; d=mo; mo=sw; }   /* 7-25-2026 */
+    if(mo<1 || mo>12 || d<1 || d>31) return "";
+    return y+"-"+pad(mo)+"-"+pad(d);
+  }
+  if((m=/^(\d{1,2})\s+(\S+)\s+(\d{2,4})$/.exec(v))){        /* 6 July 2026 */
+    var mn=monthNum(m[2]); if(mn){ var yy=+m[3]; if(yy<100) yy+=2000; return yy+"-"+pad(mn)+"-"+pad(+m[1]); }
+  }
+  if((m=/^(\S+)\s+(\d{1,2})\s+(\d{2,4})$/.exec(v))){        /* July 6 2026 */
+    var mn2=monthNum(m[1]); if(mn2){ var yy2=+m[3]; if(yy2<100) yy2+=2000; return yy2+"-"+pad(mn2)+"-"+pad(+m[2]); }
   }
   return "";
 }
@@ -504,7 +554,8 @@ function taskToText(t){
   return L.join("\n");
 }
 function sortAsc(a,b){
-  if(a.date!==b.date) return a.date<b.date?-1:1;
+  var da=a.date||"9999-99-99", db=b.date||"9999-99-99";
+  if(da!==db) return da<db?-1:1;
   var x=toMin(a.start), y=toMin(b.start);
   if(x==null) x=9999; if(y==null) y=9999;
   return x-y;
@@ -593,9 +644,9 @@ function render(){
   });
   groups.forEach(function(g){
     var mins=g.items.reduce(function(a,t){return a+durMin(t);},0);
-    html+='<div class="daygroup"><div class="dayhead">'+
-          '<span class="d">'+esc(fmtDate(g.date))+'</span>'+
-          '<span class="w">'+esc(weekday(g.date))+'</span>'+
+    html+='<div class="daygroup"><div class="dayhead'+(g.date?'':' undated')+'">'+
+          '<span class="d">'+(g.date?esc(fmtDate(g.date)):'بدون تاريخ')+'</span>'+
+          '<span class="w">'+(g.date?esc(weekday(g.date)):'أضف التاريخ ليدخل في التصدير')+'</span>'+
           '<span class="t">'+esc(fmtDur(mins))+' · '+g.items.length+' تاسك</span></div>';
     g.items.forEach(function(t){
       var pn="";
@@ -630,7 +681,7 @@ function render(){
 }
 function updateStats(){
   var days={}, mins=0;
-  tasks.forEach(function(t){ days[t.date]=1; mins+=durMin(t); });
+  tasks.forEach(function(t){ if(t.date) days[t.date]=1; mins+=durMin(t); });
   $("#st-tasks").textContent=tasks.length;
   $("#st-days").textContent=Object.keys(days).length;
   $("#st-hours").textContent=fmtDur(mins);
@@ -638,6 +689,7 @@ function updateStats(){
 
 /* ---------- export ---------- */
 function inRange(t){
+  if(!t.date) return false;                    /* بدون تاريخ: لا يمكن تصديره */
   var a=$("#ex-from").value, b=$("#ex-to").value;
   if(a && t.date < a) return false;
   if(b && t.date > b) return false;
@@ -647,6 +699,9 @@ function buildExport(){
   var rows=tasks.filter(inRange).sort(sortAsc);
   var days={}, mins=0;
   rows.forEach(function(t){ days[t.date]=1; mins+=durMin(t); });
+  var undated=tasks.filter(function(t){ return !t.date; }).length;
+  $("#ex-undated").textContent=undated;
+  $("#ex-undated-wrap").hidden = !undated;
   $("#ex-count").textContent=rows.length;
   $("#ex-days").textContent=Object.keys(days).length;
   $("#ex-hours").textContent=fmtDur(mins);
@@ -707,39 +762,152 @@ function downloadFile(name, content, type){
 }
 
 /* ---------- import parser ---------- */
-function parseBlocks(txt){
-  var out=[], skipped=0;
-  txt.replace(/\r/g,"").split(/\n\s*\n+/).forEach(function(block){
-    var lines=block.split("\n").map(function(s){return s.trim();}).filter(Boolean);
-    if(!lines.length) return;
-    var parts=[], wos=[], sc="", from="", to="", other="", date="", start="", stop="", notes=[], m;
-    lines.forEach(function(line){
-      if((m=/^part\s*(?:number|no\.?|#)?\s*:?\s*(.*)$/i.exec(line))){ parts.push(m[1].trim()); return; }
-      if((m=/^work\s*order\s*:?\s*(.*)$/i.exec(line))){ wos.push(m[1].trim()); return; }
-      if((m=/^date\s*:?\s*(.*)$/i.exec(line))){ date=parseDate(m[1]); return; }
-      if((m=/^start\s*:?\s*(.*)$/i.exec(line))){ start=parseTime(m[1]); return; }
-      if((m=/^stop\s*:?\s*(.*)$/i.exec(line))){ stop=parseTime(m[1]); return; }
-      if(/^final\s*bag\b/i.test(line)){ sc="final"; return; }
-      if(/^re-?\s*bag\b/i.test(line)){ sc="rebag"; return; }
-      if((m=/^layers?\s*:?\s*(.*)$/i.exec(line))){
-        var v=m[1].trim(), r=/^(?:from\s+)?(.+?)\s+to\s+(.+)$/i.exec(v);
-        if(r){ sc="layers"; from=r[1].trim(); to=r[2].trim(); }
-        else if(/^final\s*bag/i.test(v)){ sc="final"; }
-        else if(/^re-?\s*bag/i.test(v)){ sc="rebag"; }
-        else if(v){ sc="other"; other="Layers: "+v; }
-        return;
-      }
-      notes.push(line);
-    });
-    if(!date){ skipped++; return; }
-    var n=Math.max(parts.length, wos.length, 1), pairs=[];
-    for(var i=0;i<n;i++) pairs.push({ part:parts[i]||"", wo:wos[i]||"" });
-    out.push({
-      id:uid(), pairs:pairs, scope:sc||"other", from:from, to:to, text:other,
-      date:date, start:start, stop:stop, note:notes.join(" ").trim()
+/* يقرأ النص الملصوق بأي ترتيب أو تباعد، ويقسّمه إلى نفس بنية التاسك الأساسية */
+var RE={
+  part  : /^(?:part\s*(?:numbers?|no\.?|num|#)?|p\s*\/\s*n|pn(?=\s*[:\-]))\s*[:؛،\-–]?\s*(.*)$/i,
+  wo    : /^(?:work\s*orders?(?:\s*(?:number|no\.?|#))?|w\s*\/\s*o|wo(?=\s*[:\-])|أمر\s*(?:الشغل|العمل)|امر\s*(?:الشغل|العمل))\s*[:؛،\-–]?\s*(.*)$/i,
+  partAr: /^(?:رقم\s*(?:ال)?قطعة|القطعة)\s*[:،\-–]?\s*(.*)$/,
+  date  : /^(?:date|day|التاريخ|تاريخ|اليوم)\s*[:،\-–]?\s*(.*)$/i,
+  start : /^(?:start(?:\s*time)?|begin|البداية|بداية|بدء|من\s*الساعة)\s*[:،\-–]?\s*(.*)$/i,
+  stop  : /^(?:stop(?:\s*time)?|end(?:\s*time)?|finish|النهاية|نهاية|انتهاء|إلى\s*الساعة|الى\s*الساعة)\s*[:،\-–]?\s*(.*)$/i,
+  layers: /^(?:layers?|plies|ply|الطبقات|طبقات|طبقة)\s*[:،\-–]?\s*(.*)$/i,
+  final : /^(?:final\s*bag|finalbag|f\s*\/?\s*b|الكيس\s*النهائي|كيس\s*نهائي)\s*$/i,
+  rebag : /^(?:re\s*-?\s*bag|إعادة\s*تكييس|اعادة\s*تكييس)\s*$/i,
+  range : /^(?:from\s+)?(\d[\w.\-\/]*)\s+(?:to|→|=>|حتى|إلى|الى)\s+(.+)$/i,
+  sep   : /^[-=_*.·•–—\s]{3,}$/
+};
+/* أسطر قد تحمل أكثر من حقل: "Start 15:00 Stop:20:30" */
+var SPLIT=/\s+(?=(?:part\s*number|work\s*order|p\s*\/\s*n|w\s*\/\s*o|date|start|stop|layers?)\b\s*:?\s*\S)/i;
+
+function prepLines(txt){
+  var out=[];
+  normDigits(txt).replace(/\r/g,"").split("\n").forEach(function(raw){
+    var line=raw.replace(/^[\s•·*>–—]+/,"").replace(/\s+$/,"");
+    if(!line.trim()){ out.push(""); return; }
+    line.split(SPLIT).forEach(function(piece){
+      piece=piece.trim();
+      if(piece) out.push(piece);
     });
   });
-  return { items:out, skipped:skipped };
+  return out;
+}
+function cleanVal(v){
+  v=String(v==null?"":v).trim().replace(/^[:،\-–\s]+/,"").trim();
+  if(/^[\d\s]+$/.test(v)) v=v.replace(/\s+/g,"");
+  return v;
+}
+function parseInput(txt){
+  var recs=[], cur=null, ignored=[];
+  function fresh(){ return {parts:[],wos:[],scope:"",from:"",to:"",text:"",date:"",start:"",stop:"",notes:[]}; }
+  function timed(r){ return !!(r && (r.date||r.start||r.stop)); }
+  function notesOnly(r){ return !!(r && r.notes.length && !r.parts.length && !r.wos.length && !r.scope); }
+  function flush(){
+    if(cur){
+      if(cur.parts.length||cur.wos.length||cur.scope||cur.date||cur.start||cur.stop) recs.push(cur);
+      else if(cur.notes.length) ignored=ignored.concat(cur.notes);
+    }
+    cur=null;
+  }
+  function need(){ if(!cur) cur=fresh(); return cur; }
+
+  prepLines(txt).forEach(function(line){
+    var m;
+    if(line===""){ if(timed(cur)) flush(); return; }
+    if(RE.sep.test(line)){ flush(); return; }
+
+    if((m=RE.part.exec(line)) || (m=RE.partAr.exec(line))){
+      if(timed(cur) || notesOnly(cur)) flush();
+      need().parts.push(cleanVal(m[1])); return;
+    }
+    if((m=RE.wo.exec(line))){
+      if(timed(cur) || notesOnly(cur)) flush();
+      need().wos.push(cleanVal(m[1])); return;
+    }
+    if((m=RE.date.exec(line))){
+      var d=parseDate(m[1]);
+      if(cur && cur.date) flush();
+      if(d) need().date=d; else need().notes.push(line);
+      return;
+    }
+    if((m=RE.start.exec(line))){
+      var st=parseTime(m[1]);
+      if(cur && cur.start) flush();
+      if(st) need().start=st; else need().notes.push(line);
+      return;
+    }
+    if((m=RE.stop.exec(line))){
+      var sp=parseTime(m[1]);
+      if(cur && cur.stop) flush();
+      if(sp) need().stop=sp; else need().notes.push(line);
+      return;
+    }
+    if(RE.final.test(line)){ if(timed(cur)) flush(); setScopeOn(need(),"final","",""); return; }
+    if(RE.rebag.test(line)){ if(timed(cur)) flush(); setScopeOn(need(),"rebag","",""); return; }
+    if((m=RE.layers.exec(line))){
+      if(timed(cur)) flush();
+      var v=cleanVal(m[1]);
+      if(!v){ return; }
+      if(RE.final.test(v)){ setScopeOn(need(),"final","",""); return; }
+      if(RE.rebag.test(v)){ setScopeOn(need(),"rebag","",""); return; }
+      var r=RE.range.exec(v) || /^(?:from\s+)?(.+?)\s+(?:to|→|حتى|إلى|الى)\s+(.+)$/i.exec(v);
+      if(r) setScopeOn(need(),"layers",r[1].trim(),r[2].trim());
+      else  setScopeOn(need(),"other","","","Layers: "+v);
+      return;
+    }
+    if((m=RE.range.exec(line))){                 /* سطر مدى بدون كلمة Layers */
+      if(timed(cur)) flush();
+      setScopeOn(need(),"layers",m[1].trim(),m[2].trim()); return;
+    }
+    need().notes.push(line);
+  });
+  flush();
+
+  function setScopeOn(r,sc,from,to,text){
+    if(r.scope){
+      if(r.scope==="layers" && sc==="final" && !r.to){ r.to="final bag"; return; }
+      r.notes.push(sc==="final"?"Final bag":sc==="rebag"?"Rebag":(text||[from,to].join(" to ")));
+      return;
+    }
+    r.scope=sc; r.from=from||""; r.to=to||""; r.text=text||"";
+  }
+
+  var items=recs.map(function(r){
+    var n=Math.max(r.parts.length, r.wos.length, 1), pairs=[], i;
+    for(i=0;i<n;i++) pairs.push({ part:r.parts[i]||"", wo:r.wos[i]||"" });
+    while(pairs.length>1 && !pairs[pairs.length-1].part && !pairs[pairs.length-1].wo) pairs.pop();
+    return {
+      id:uid(), pairs:pairs, scope:r.scope||"other", from:r.from, to:r.to, text:r.text,
+      date:r.date, start:r.start, stop:r.stop,
+      note:r.notes.join(" ").replace(/\s+/g," ").trim()
+    };
+  });
+  return { items:items, ignored:ignored };
+}
+function taskKey(t){
+  return [t.date,t.start,t.stop,scopeLine(t),
+    (t.pairs||[]).map(function(p){return p.part+"/"+p.wo;}).join(",")].join("|");
+}
+function previewImport(){
+  var raw=$("#imp").value;
+  var res=parseInput(raw);
+  var have={}; tasks.forEach(function(t){ have[taskKey(t)]=1; });
+  var dup=0, undated=0, fresh=[];
+  res.items.forEach(function(t){
+    if(!t.date) undated++;
+    if(have[taskKey(t)]) dup++; else { have[taskKey(t)]=1; fresh.push(t); }
+  });
+  $("#imp-count").textContent=res.items.length;
+  $("#imp-new").textContent=fresh.length;
+  $("#imp-dup").textContent=dup;
+  $("#imp-undated").textContent=undated;
+  $("#imp-out").textContent = res.items.length
+    ? res.items.slice().sort(sortAsc).map(taskToText).join("\n\n")
+    : (raw.trim() ? "لم يتم التعرف على أي تاسك في هذا النص." : "الصق النص وستظهر هنا التاسكات بعد تقسيمها.");
+  $("#imp-ignored").hidden = !res.ignored.length;
+  $("#imp-ignored").textContent = res.ignored.length
+    ? "أسطر لم تُستخدم: " + res.ignored.slice(0,6).join(" · ") + (res.ignored.length>6?" …":"")
+    : "";
+  return { all:res.items, fresh:fresh, dup:dup, undated:undated };
 }
 
 /* ---------- events ---------- */
@@ -838,15 +1006,21 @@ $("#download").addEventListener("click",function(){
 $("#backup").addEventListener("click",function(){
   downloadFile("tasks-backup-"+todayISO()+".json", JSON.stringify(tasks,null,2), "application/json");
 });
+var impT;
+$("#imp").addEventListener("input",function(){
+  clearTimeout(impT); impT=setTimeout(previewImport,180);
+});
 $("#do-import").addEventListener("click",function(){
-  var raw=$("#imp").value;
-  if(!raw.trim()){ toast("الصق النص أولاً"); return; }
-  var res=parseBlocks(raw);
-  if(!res.items.length){ toast("لم يتم التعرف على أي تاسك"); return; }
-  tasks=tasks.concat(res.items);
+  if(!$("#imp").value.trim()){ toast("الصق النص أولاً"); return; }
+  var res=previewImport();
+  if(!res.all.length){ toast("لم يتم التعرف على أي تاسك"); return; }
+  if(!res.fresh.length){ toast("كل التاسكات موجودة مسبقاً"); return; }
+  tasks=tasks.concat(res.fresh);
   save(); render(); buildExport();
-  $("#imp").value="";
-  toast("تم استيراد "+res.items.length+" تاسك"+(res.skipped?" · تم تجاهل "+res.skipped+" بدون تاريخ":""));
+  $("#imp").value=""; previewImport();
+  toast("تم استيراد "+res.fresh.length+" تاسك"+
+        (res.dup?" · تجاهلت "+res.dup+" مكرر":"")+
+        (res.undated?" · "+res.undated+" بدون تاريخ":""));
   $$(".tabs button")[0].click();
 });
 $("#restore").addEventListener("click",function(){ $("#file").click(); });
@@ -889,6 +1063,7 @@ resetForm();
 $("#date").value=todayISO();
 render();
 buildExport();
+previewImport();
 })();
 </script>
 </body>
