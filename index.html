@@ -220,6 +220,25 @@ pre.out{
   background:var(--sunken); border:1px solid var(--line); border-radius:10px;
   padding:14px; margin:0 0 12px; max-height:460px; overflow:auto; white-space:pre; tab-size:2;
 }
+.aibox{
+  border:1px solid var(--line); border-radius:12px; background:var(--sunken);
+  padding:12px 14px; margin-bottom:14px;
+}
+.aihead{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.aihead .ttl{font-weight:700; font-size:13.5px}
+.aihead .badge{
+  font-family:var(--mono); font-size:11px; color:var(--ink-2);
+  border:1px solid var(--line); border-radius:99px; padding:2px 9px; background:var(--surface);
+}
+.aihead .grow{margin-inline-start:auto; display:flex; gap:8px; align-items:center}
+#ai-settings{margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
+#ai-settings .note{margin:0 0 10px}
+.spin{
+  display:inline-block; width:12px; height:12px; margin-inline-end:6px; vertical-align:-1px;
+  border:2px solid currentColor; border-top-color:transparent; border-radius:50%;
+  animation:sp .7s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
 .impgrid{display:grid; grid-template-columns:1fr; gap:12px}
 @media (min-width:760px){ .impgrid{grid-template-columns:1fr 1fr} }
 .dayhead.undated .d{color:var(--warn)}
@@ -391,13 +410,47 @@ textarea.in{
           <p class="note">الصق التاسكات بأي صيغة قريبة من المعتاد — بسطر فاصل أو بدونه، بترتيب مختلف، بأسماء حقول مختصرة
             (<span dir="ltr">P/N · W/O · FB</span>)، بتواريخ <span dir="ltr">6-7-2026</span> أو <span dir="ltr">6/7/2026</span> أو
             <span dir="ltr">2026-07-06</span>، وبأرقام عربية أو إنجليزية. يمين الصفحة تظهر التاسكات بعد تقسيمها، راجعها ثم استورد.</p>
+          <div class="aibox">
+            <div class="aihead">
+              <span class="ttl">تحليل بواسطة Claude</span>
+              <span class="badge" id="ai-state">غير مفعّل</span>
+              <span class="grow">
+                <button class="btn" type="button" id="ai-run">حلّل النص بـ Claude</button>
+                <button class="linkbtn" type="button" id="ai-toggle">الإعدادات</button>
+              </span>
+            </div>
+            <div id="ai-settings" hidden>
+              <p class="note">
+                يُرسَل النص الملصوق إلى <span dir="ltr">api.anthropic.com</span> ليفهمه Claude ويقسّمه، ثم تُعرض النتيجة
+                للمراجعة قبل الإضافة. المفتاح يُحفظ في هذا المتصفح فقط (لا يصل إلى GitHub ولا إلى أي جهة أخرى)،
+                وكل تحليل يُحسب على رصيد حسابك في Anthropic.
+              </p>
+              <div class="two">
+                <div class="field">
+                  <label class="lbl" for="ai-key">Anthropic API key</label>
+                  <input type="password" id="ai-key" dir="ltr" placeholder="sk-ant-..." autocomplete="off">
+                </div>
+                <div class="field">
+                  <label class="lbl" for="ai-model">الموديل</label>
+                  <select id="ai-model">
+                    <option value="claude-opus-5">Claude Opus 5 — الأدق</option>
+                    <option value="claude-sonnet-5">Claude Sonnet 5 — أسرع وأقل تكلفة</option>
+                  </select>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn ghost" type="button" id="ai-save">حفظ الإعدادات</button>
+                <button class="btn danger" type="button" id="ai-forget">حذف المفتاح</button>
+              </div>
+            </div>
+          </div>
           <div class="impgrid">
             <div class="field" style="margin:0">
               <label class="lbl" for="imp">النص الملصوق</label>
               <textarea class="in" id="imp" placeholder="Part number: 153302779&#10;Work order: 002866&#10;Layers: From 7.1 to 13.4&#10;Date: 6-7-2026&#10;Start 15:00&#10;Stop:20:30"></textarea>
             </div>
             <div class="field" style="margin:0">
-              <label class="lbl">بعد التقسيم</label>
+              <label class="lbl">بعد التقسيم <span id="imp-src" style="text-transform:none; letter-spacing:0">· تحليل محلي</span></label>
               <pre class="out" id="imp-out" style="max-height:420px; min-height:220px; margin:0"></pre>
             </div>
           </div>
@@ -921,9 +974,149 @@ function taskKey(t){
   return [t.date,t.start,t.stop,scopeLine(t),
     (t.pairs||[]).map(function(p){return p.part+"/"+p.wo;}).join(",")].join("|");
 }
+
+/* ---------- تحليل بواسطة Claude (Messages API مباشرة من المتصفح) ---------- */
+var AI_KEY_STORE="layup-log-anthropic-key", AI_MODEL_STORE="layup-log-model";
+var aiTasks=null, aiBusy=false;
+
+var AI_SYSTEM=[
+ "You convert a composite layup / bagging shift log into structured tasks.",
+ "The writer logs, per task: one or more part numbers with their work orders, what was done",
+ "(a ply/layer range, a final bag, a rebag, or something else), the date, and the start and stop times.",
+ "",
+ "Rules:",
+ "- Return every task you find, in the order it appears. Never merge two tasks and never split one task.",
+ "- pairs: each part number with the work order that belongs to it. One task may list several",
+ "  part/work-order pairs that share the same scope, date and times. Keep an empty string for a missing side.",
+ "- scope: \"layers\" for a ply/layer range, \"final\" for a final bag, \"rebag\" for a rebag,",
+ "  \"other\" for anything else (put the wording in \"text\", e.g. a ply count like \"Layers: 10\").",
+ "- from / to: the layer numbers exactly as written (\"7.1\", \"13.36\", \"final bag\"). One side may be empty",
+ "  when the log records only a start layer or only an end layer (\"Till layer 4.11\" -> to only).",
+ "- date: ISO yyyy-mm-dd. Source dates are DAY-first: 6/7/2026 and 6-7-2026 are 6 July 2026.",
+ "- start / stop: 24-hour HH:MM. \"3:00 pm\" -> \"15:00\", \"7:00\" on a morning shift -> \"07:00\", \"2100\" -> \"21:00\".",
+ "- note: anything that is not one of the fields above - delays, quality holds, re-cuts, remarks",
+ "  (\"(Quality delay)\", \"Hold by Quality\", \"late on first cold, lack of ports\").",
+ "  Text after a comma inside a layer line is a note, not part of the range.",
+ "- Ignore operator/name lines entirely, and ignore a \"last ply\" / \"رقم آخر Ply\" line: the end of the work",
+ "  is the \"finish/end layer\" value, not the part's last ply.",
+ "- Arabic labels mean the same fields: رقم البارت/القطعة = part number, أمر الشغل/العمل = work order,",
+ "  التاريخ = date, بداية العمل من الـ Ply = from layer, نهاية العمل عند الـ Ply = to layer.",
+ "- Use \"\" for anything the log does not state. Never invent a value and never guess a missing time or date."
+].join("\n");
+
+var AI_SCHEMA={
+  type:"object", additionalProperties:false, required:["tasks"],
+  properties:{ tasks:{ type:"array", items:{
+    type:"object", additionalProperties:false,
+    required:["pairs","scope","from","to","text","date","start","stop","note"],
+    properties:{
+      pairs:{ type:"array", items:{ type:"object", additionalProperties:false,
+        required:["part","wo"], properties:{ part:{type:"string"}, wo:{type:"string"} } } },
+      scope:{ type:"string", enum:["layers","final","rebag","other"] },
+      from:{type:"string"}, to:{type:"string"}, text:{type:"string"},
+      date:{type:"string"}, start:{type:"string"}, stop:{type:"string"}, note:{type:"string"}
+    } } } }
+};
+
+function aiGet(k,d){ try{ return localStorage.getItem(k)||d; }catch(e){ return d; } }
+function aiSet(k,v){ try{ v?localStorage.setItem(k,v):localStorage.removeItem(k); }catch(e){} }
+function aiKey(){ return aiGet(AI_KEY_STORE,""); }
+function aiModel(){ return aiGet(AI_MODEL_STORE,"claude-opus-5"); }
+function aiRefresh(){
+  var has=!!aiKey();
+  $("#ai-state").textContent = has ? aiModel() : "غير مفعّل";
+  $("#ai-key").value = has ? aiKey() : "";
+  $("#ai-model").value = aiModel();
+}
+function aiNormalize(list){
+  return (list||[]).map(function(t){
+    var pairs=(t.pairs||[]).map(function(p){
+      return { part:String(p.part||"").trim(), wo:String(p.wo||"").trim() };
+    });
+    if(!pairs.length) pairs=[{part:"",wo:""}];
+    var date=String(t.date||"").trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) date=parseDate(date);
+    var sc=String(t.scope||"").trim();
+    if(["layers","final","rebag","other"].indexOf(sc)<0) sc="other";
+    return {
+      id:uid(), pairs:pairs, scope:sc,
+      from:String(t.from||"").trim(), to:String(t.to||"").trim(), text:String(t.text||"").trim(),
+      date:date, start:parseTime(t.start), stop:parseTime(t.stop),
+      note:String(t.note||"").replace(/\s+/g," ").trim()
+    };
+  });
+}
+function askClaude(text){
+  var model=aiModel(), headers={
+    "content-type":"application/json",
+    "x-api-key":aiKey(),
+    "anthropic-version":"2023-06-01",
+    "anthropic-dangerous-direct-browser-access":"true"
+  };
+  var body={
+    model:model, max_tokens:16000,
+    output_config:{ effort:"medium", format:{ type:"json_schema", schema:AI_SCHEMA } },
+    system:AI_SYSTEM,
+    messages:[{ role:"user", content:text }]
+  };
+  if(model==="claude-opus-5"){                 /* إعادة المحاولة تلقائياً عند رفض النموذج */
+    headers["anthropic-beta"]="server-side-fallback-2026-07-01";
+    body.fallbacks="default";
+  }
+  var ctl=new AbortController(), timer=setTimeout(function(){ ctl.abort(); }, 180000);
+  return fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST", headers:headers, body:JSON.stringify(body), signal:ctl.signal
+  }).then(function(res){
+    return res.text().then(function(raw){
+      if(!res.ok){
+        var msg=raw.slice(0,300);
+        try{ msg=JSON.parse(raw).error.message; }catch(e){}
+        if(res.status===401) msg="المفتاح غير صحيح أو منتهي";
+        if(res.status===429) msg="تجاوزت حد الطلبات — انتظر قليلاً";
+        throw new Error("("+res.status+") "+msg);
+      }
+      var data=JSON.parse(raw);
+      if(data.stop_reason==="refusal") throw new Error("النموذج رفض معالجة هذا النص");
+      var txt=(data.content||[]).filter(function(b){ return b.type==="text"; })
+              .map(function(b){ return b.text; }).join("");
+      var out=JSON.parse(txt);
+      return { items:aiNormalize(out.tasks), usage:data.usage||{}, model:data.model||model };
+    });
+  }).finally(function(){ clearTimeout(timer); });
+}
+function runClaude(){
+  var raw=$("#imp").value;
+  if(!raw.trim()){ toast("الصق النص أولاً"); return; }
+  if(!aiKey()){
+    $("#ai-settings").hidden=false; $("#ai-key").focus();
+    toast("أضف مفتاح Anthropic أولاً"); return;
+  }
+  if(aiBusy) return;
+  aiBusy=true;
+  var btn=$("#ai-run"), label=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>جارٍ التحليل…';
+  askClaude(raw).then(function(r){
+    if(!r.items.length){ toast("Claude لم يجد تاسكات في هذا النص"); return; }
+    aiTasks=r.items;
+    previewImport();
+    var u=r.usage||{};
+    $("#imp-src").textContent="· تحليل Claude ("+(u.input_tokens||0)+" ← "+(u.output_tokens||0)+" tokens)";
+    toast("Claude قسّم "+r.items.length+" تاسك — راجعها ثم استورد");
+  }).catch(function(err){
+    var m=String(err&&err.message||err);
+    if(err&&err.name==="AbortError") m="انتهت مهلة الانتظار";
+    else if(/Failed to fetch|NetworkError|load failed/i.test(m))
+      m="الاتصال بـ Claude محجوب في هذه الصفحة — افتحها من رابط GitHub Pages";
+    toast("تعذّر التحليل: "+m);
+  }).finally(function(){
+    aiBusy=false; btn.disabled=false; btn.innerHTML=label;
+  });
+}
+
 function previewImport(){
   var raw=$("#imp").value;
-  var res=parseInput(raw);
+  var res = aiTasks ? { items:aiTasks, ignored:[] } : parseInput(raw);
+  if(!aiTasks) $("#imp-src").textContent="· تحليل محلي";
   var have={}; tasks.forEach(function(t){ have[taskKey(t)]=1; });
   var dup=0, undated=0, fresh=[];
   res.items.forEach(function(t){
@@ -1042,7 +1235,22 @@ $("#backup").addEventListener("click",function(){
 });
 var impT;
 $("#imp").addEventListener("input",function(){
+  aiTasks=null;                       /* النص تغيّر: نتيجة Claude لم تعد تخصّه */
   clearTimeout(impT); impT=setTimeout(previewImport,180);
+});
+$("#ai-run").addEventListener("click", runClaude);
+$("#ai-toggle").addEventListener("click",function(){
+  var box=$("#ai-settings"); box.hidden=!box.hidden;
+  if(!box.hidden) $("#ai-key").focus();
+});
+$("#ai-save").addEventListener("click",function(){
+  aiSet(AI_KEY_STORE, $("#ai-key").value.trim());
+  aiSet(AI_MODEL_STORE, $("#ai-model").value);
+  aiRefresh();
+  toast($("#ai-key").value.trim() ? "تم حفظ الإعدادات في هذا المتصفح" : "تم حذف المفتاح");
+});
+$("#ai-forget").addEventListener("click",function(){
+  aiSet(AI_KEY_STORE,""); $("#ai-key").value=""; aiRefresh(); toast("تم حذف المفتاح من المتصفح");
 });
 $("#do-import").addEventListener("click",function(){
   if(!$("#imp").value.trim()){ toast("الصق النص أولاً"); return; }
@@ -1051,7 +1259,7 @@ $("#do-import").addEventListener("click",function(){
   if(!res.fresh.length){ toast("كل التاسكات موجودة مسبقاً"); return; }
   tasks=tasks.concat(res.fresh);
   save(); render(); buildExport();
-  $("#imp").value=""; previewImport();
+  $("#imp").value=""; aiTasks=null; previewImport();
   toast("تم استيراد "+res.fresh.length+" تاسك"+
         (res.dup?" · تجاهلت "+res.dup+" مكرر":"")+
         (res.undated?" · "+res.undated+" بدون تاريخ":""));
@@ -1101,6 +1309,7 @@ resetForm();
 $("#date").value=todayISO();
 render();
 buildExport();
+aiRefresh();
 previewImport();
 })();
 </script>
