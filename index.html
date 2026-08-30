@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سجل التاسكات اليومية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ground:#EFF3F3; --surface:#FFFFFF; --sunken:#E5EBEB; --line:#D2DBDB; --line-soft:#E3E9E9;
+  --ink:#16201F; --ink-2:#5C6C6B; --ink-3:#7C8E8D;
+  --accent:#0C6F78; --accent-ink:#FFFFFF; --accent-soft:rgba(12,111,120,.10);
+  --warn:#9C5A08; --warn-soft:rgba(156,90,8,.12);
+  --danger:#A8352C; --danger-soft:rgba(168,53,44,.12);
+  --ok:#2F6B44;
+  --shadow:0 1px 2px rgba(16,32,32,.05), 0 8px 24px -16px rgba(16,32,32,.35);
+  --r:10px;
+  --sans:"IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1617; --surface:#182122; --sunken:#0B1112; --line:#2B3839; --line-soft:#222D2E;
+    --ink:#E5EDEC; --ink-2:#94A6A5; --ink-3:#6F8180;
+    --accent:#4FC3CE; --accent-ink:#062A2E; --accent-soft:rgba(79,195,206,.14);
+    --warn:#E0A44E; --warn-soft:rgba(224,164,78,.14);
+    --danger:#E58074; --danger-soft:rgba(229,128,116,.14);
+    --ok:#74C293;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1617; --surface:#182122; --sunken:#0B1112; --line:#2B3839; --line-soft:#222D2E;
+  --ink:#E5EDEC; --ink-2:#94A6A5; --ink-3:#6F8180;
+  --accent:#4FC3CE; --accent-ink:#062A2E; --accent-soft:rgba(79,195,206,.14);
+  --warn:#E0A44E; --warn-soft:rgba(224,164,78,.14);
+  --danger:#E58074; --danger-soft:rgba(229,128,116,.14);
+  --ok:#74C293;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.wrap{max-width:1200px; margin:0 auto; padding:0 18px 64px}
+
+/* ---------- header ---------- */
+header.top{
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+  position:sticky; top:0; z-index:20;
+}
+.top-in{
+  max-width:1200px; margin:0 auto; padding:14px 18px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.brand{display:flex; flex-direction:column; gap:2px; margin-inline-end:auto}
+.brand .eyebrow{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--ink-2);
+}
+.brand h1{margin:0; font-size:19px; font-weight:700; letter-spacing:-.01em}
+.stats{display:flex; gap:0; align-items:stretch; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; background:var(--sunken)}
+.stat{padding:6px 14px; display:flex; flex-direction:column; align-items:center; min-width:76px; background:var(--surface)}
+.stat + .stat{border-inline-start:1px solid var(--line)}
+.stat b{font-family:var(--mono); font-size:16px; font-weight:600; line-height:1.2}
+.stat span{font-size:10.5px; color:var(--ink-2)}
+.icon-btn{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  width:38px; height:38px; display:grid; place-items:center; cursor:pointer; color:var(--ink-2);
+}
+.icon-btn:hover{border-color:var(--accent); color:var(--accent)}
+
+/* ---------- layout ---------- */
+.grid{display:grid; grid-template-columns:1fr; gap:18px; padding-top:18px}
+@media (min-width:1000px){
+  .grid{grid-template-columns:390px minmax(0,1fr); align-items:start}
+  .col-form{position:sticky; top:86px}
+}
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow);
+}
+.card-head{
+  padding:14px 16px; border-bottom:1px solid var(--line-soft);
+  display:flex; align-items:center; gap:10px;
+}
+.card-head h2{margin:0; font-size:14px; font-weight:600}
+.card-head .hint{margin-inline-start:auto; font-size:11.5px; color:var(--ink-3); font-family:var(--mono)}
+.card-body{padding:16px}
+
+/* ---------- form ---------- */
+.field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px}
+label.lbl{
+  font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2);
+  font-family:var(--mono);
+}
+input[type=text],input[type=date],input[type=time],textarea,select{
+  width:100%; background:var(--sunken); border:1px solid var(--line); border-radius:8px;
+  padding:9px 11px; transition:border-color .12s, background .12s;
+}
+input[type=text]:focus,input[type=date]:focus,input[type=time]:focus,textarea:focus{
+  background:var(--surface); border-color:var(--accent); outline:none;
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+input[dir=ltr]{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.pair{
+  display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center; margin-bottom:8px;
+}
+.pair .rm{
+  border:1px solid var(--line); background:transparent; color:var(--ink-3);
+  width:32px; height:36px; border-radius:8px; cursor:pointer; line-height:1;
+}
+.pair .rm:hover{color:var(--danger); border-color:var(--danger)}
+.linkbtn{
+  background:none; border:none; color:var(--accent); cursor:pointer; padding:2px 0;
+  font-size:12.5px; font-weight:600;
+}
+.linkbtn:hover{text-decoration:underline}
+.seg{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; background:var(--sunken); padding:4px; border-radius:10px; border:1px solid var(--line)}
+.seg button{
+  border:none; background:transparent; padding:7px 4px; border-radius:7px; cursor:pointer;
+  font-size:12.5px; color:var(--ink-2); font-weight:500;
+}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); font-weight:600}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.btn{
+  border:1px solid transparent; border-radius:9px; padding:10px 16px; cursor:pointer;
+  font-weight:600; font-size:14px; background:var(--accent); color:var(--accent-ink);
+}
+.btn:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent; border-color:var(--line); color:var(--ink-2)}
+.btn.ghost:hover{border-color:var(--accent); color:var(--accent)}
+.btn.danger{background:transparent; border-color:var(--danger); color:var(--danger)}
+.actions{display:flex; gap:8px; margin-top:4px}
+.editing-flag{
+  display:none; align-items:center; gap:8px; background:var(--warn-soft); color:var(--warn);
+  border:1px solid var(--warn); border-radius:9px; padding:8px 12px; margin-bottom:14px; font-size:12.5px;
+}
+body.is-editing .editing-flag{display:flex}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex; gap:2px; padding:4px; background:var(--sunken); border-radius:10px; border:1px solid var(--line)}
+.tabs button{
+  border:none; background:transparent; cursor:pointer; padding:8px 16px; border-radius:7px;
+  font-size:13px; font-weight:600; color:var(--ink-2);
+}
+.tabs button[aria-selected="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.pane{display:none}
+.pane.on{display:block}
+
+/* ---------- log ---------- */
+.searchrow{display:flex; gap:10px; align-items:center; margin-bottom:14px}
+.searchrow input{flex:1}
+.daygroup{margin-bottom:22px}
+.dayhead{
+  display:flex; align-items:baseline; gap:10px; padding:0 2px 8px;
+  border-bottom:1px solid var(--line-soft); margin-bottom:10px;
+}
+.dayhead .d{font-family:var(--mono); font-size:14px; font-weight:600; letter-spacing:.02em}
+.dayhead .w{font-size:12px; color:var(--ink-2)}
+.dayhead .t{margin-inline-start:auto; font-family:var(--mono); font-size:12px; color:var(--accent); font-weight:600}
+.task{
+  border:1px solid var(--line); border-radius:12px; background:var(--surface);
+  padding:12px 14px; margin-bottom:8px; display:grid; gap:8px;
+  grid-template-columns:minmax(0,1fr) auto; align-items:start;
+}
+.task:hover{border-color:var(--accent)}
+.task .main{min-width:0}
+.pn{display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:4px}
+.pn .kv{font-family:var(--mono); font-size:13px; font-variant-numeric:tabular-nums}
+.pn .kv i{font-style:normal; color:var(--ink-3); font-size:11px; letter-spacing:.06em}
+.scope{font-size:13.5px; color:var(--ink); margin-bottom:4px}
+.scope em{font-style:normal; color:var(--ink-2)}
+.times{display:flex; flex-wrap:wrap; gap:6px 12px; font-family:var(--mono); font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.times b{color:var(--ink); font-weight:600}
+.chip{
+  display:inline-block; font-size:11.5px; padding:2px 9px; border-radius:99px;
+  border:1px solid currentColor; margin-top:6px;
+}
+.chip.warn{color:var(--warn); background:var(--warn-soft)}
+.chip.hold{color:var(--danger); background:var(--danger-soft)}
+.rowbtns{display:flex; gap:4px}
+.rowbtns button{
+  border:1px solid var(--line); background:transparent; color:var(--ink-3);
+  border-radius:7px; width:30px; height:30px; cursor:pointer; display:grid; place-items:center;
+}
+.rowbtns button:hover{color:var(--accent); border-color:var(--accent)}
+.rowbtns button.del:hover{color:var(--danger); border-color:var(--danger)}
+.empty{
+  border:1px dashed var(--line); border-radius:12px; padding:34px 20px; text-align:center;
+  color:var(--ink-2); font-size:13.5px;
+}
+
+/* ---------- export ---------- */
+.rangebar{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px}
+.presets{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px}
+.presets button{
+  border:1px solid var(--line); background:var(--sunken); color:var(--ink-2);
+  border-radius:99px; padding:5px 12px; font-size:12px; cursor:pointer;
+}
+.presets button:hover{border-color:var(--accent); color:var(--accent)}
+.sumline{
+  display:flex; gap:16px; flex-wrap:wrap; padding:10px 12px; margin-bottom:12px;
+  background:var(--sunken); border:1px solid var(--line); border-radius:10px;
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-2);
+}
+.sumline b{color:var(--ink)}
+pre.out{
+  direction:ltr; text-align:left; font-family:var(--mono); font-size:12.5px; line-height:1.65;
+  background:var(--sunken); border:1px solid var(--line); border-radius:10px;
+  padding:14px; margin:0 0 12px; max-height:460px; overflow:auto; white-space:pre; tab-size:2;
+}
+textarea.in{
+  direction:ltr; text-align:left; font-family:var(--mono); font-size:12.5px; min-height:220px; resize:vertical;
+}
+.note{font-size:12.5px; color:var(--ink-2); margin:0 0 12px}
+.toast{
+  position:fixed; inset-inline-start:50%; transform:translateX(-50%) translateY(20px);
+  bottom:24px; background:var(--ink); color:var(--ground); padding:10px 18px; border-radius:99px;
+  font-size:13px; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:60;
+}
+.toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="eyebrow">Layup &amp; bagging log</span>
+      <h1>سجل التاسكات اليومية</h1>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="st-tasks" class="mono">0</b><span>تاسك</span></div>
+      <div class="stat"><b id="st-days" class="mono">0</b><span>يوم</span></div>
+      <div class="stat"><b id="st-hours" class="mono">0h</b><span>ساعات</span></div>
+    </div>
+    <button class="icon-btn" id="theme" title="تبديل الوضع الليلي" aria-label="تبديل الوضع الليلي">◐</button>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- ============ FORM ============ -->
+  <div class="col-form">
+  <form class="card" id="form" autocomplete="off">
+    <div class="card-head">
+      <h2 id="form-title">تسجيل تاسك جديد</h2>
+      <span class="hint" id="form-hint">new entry</span>
+    </div>
+    <div class="card-body">
+
+      <div class="editing-flag">
+        <span>أنت تعدّل تاسك محفوظ</span>
+        <button type="button" class="linkbtn" id="cancel-edit" style="margin-inline-start:auto">إلغاء التعديل</button>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Part number / Work order</label>
+        <div id="pairs"></div>
+        <button type="button" class="linkbtn" id="add-pair">+ إضافة رقم قطعة آخر</button>
+      </div>
+
+      <div class="field">
+        <label class="lbl">نوع العمل</label>
+        <div class="seg" id="scope" role="group" aria-label="نوع العمل">
+          <button type="button" data-scope="layers" aria-pressed="true">Layers</button>
+          <button type="button" data-scope="final" aria-pressed="false">Final bag</button>
+          <button type="button" data-scope="rebag" aria-pressed="false">Rebag</button>
+          <button type="button" data-scope="other" aria-pressed="false">أخرى</button>
+        </div>
+      </div>
+
+      <div class="field" id="f-layers">
+        <label class="lbl">من طبقة / إلى طبقة</label>
+        <div class="two">
+          <input type="text" id="from" dir="ltr" placeholder="7.1">
+          <input type="text" id="to" dir="ltr" placeholder="13.4 / final bag">
+        </div>
+      </div>
+
+      <div class="field" id="f-other" hidden>
+        <label class="lbl">وصف العمل</label>
+        <input type="text" id="othertext" dir="ltr" placeholder="Debulk / Trimming / ...">
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="date">Date</label>
+        <input type="date" id="date" required>
+      </div>
+
+      <div class="two">
+        <div class="field">
+          <label class="lbl" for="start">Start</label>
+          <input type="time" id="start" dir="ltr">
+        </div>
+        <div class="field">
+          <label class="lbl" for="stop">Stop</label>
+          <input type="time" id="stop" dir="ltr">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="note">ملاحظة (اختياري)</label>
+        <input type="text" id="note" placeholder="(Quality delay) / Hold by Quality">
+      </div>
+
+      <div class="actions">
+        <button class="btn" type="submit" id="submit-btn">حفظ التاسك</button>
+        <button class="btn ghost" type="button" id="clear-form">تفريغ</button>
+      </div>
+    </div>
+  </form>
+  </div>
+
+  <!-- ============ RIGHT ============ -->
+  <div>
+    <div class="tabs" role="tablist" style="margin-bottom:16px">
+      <button role="tab" aria-selected="true" data-pane="log">السجل</button>
+      <button role="tab" aria-selected="false" data-pane="export">تصدير</button>
+      <button role="tab" aria-selected="false" data-pane="import">استيراد</button>
+    </div>
+
+    <!-- LOG -->
+    <section class="pane on" id="pane-log">
+      <div class="searchrow">
+        <input type="text" id="search" placeholder="بحث برقم القطعة أو أمر الشغل أو الملاحظة…">
+      </div>
+      <div id="list"></div>
+    </section>
+
+    <!-- EXPORT -->
+    <section class="pane" id="pane-export">
+      <div class="card">
+        <div class="card-head"><h2>تصدير كنص حسب التاريخ</h2><span class="hint">plain text</span></div>
+        <div class="card-body">
+          <div class="rangebar">
+            <div class="field" style="margin:0">
+              <label class="lbl" for="ex-from">من تاريخ</label>
+              <input type="date" id="ex-from">
+            </div>
+            <div class="field" style="margin:0">
+              <label class="lbl" for="ex-to">إلى تاريخ</label>
+              <input type="date" id="ex-to">
+            </div>
+          </div>
+          <div class="presets">
+            <button type="button" data-preset="all">الكل</button>
+            <button type="button" data-preset="today">اليوم</button>
+            <button type="button" data-preset="7">آخر ٧ أيام</button>
+            <button type="button" data-preset="month">هذا الشهر</button>
+            <button type="button" data-preset="lastmonth">الشهر الماضي</button>
+          </div>
+          <div class="sumline">
+            <span>التاسكات: <b id="ex-count">0</b></span>
+            <span>الأيام: <b id="ex-days">0</b></span>
+            <span>إجمالي الوقت: <b id="ex-hours">0h</b></span>
+          </div>
+          <pre class="out" id="ex-out"></pre>
+          <div class="actions">
+            <button class="btn" type="button" id="copy">نسخ النص</button>
+            <button class="btn ghost" type="button" id="download">تنزيل ملف .txt</button>
+            <button class="btn ghost" type="button" id="backup">نسخة احتياطية JSON</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- IMPORT -->
+    <section class="pane" id="pane-import">
+      <div class="card">
+        <div class="card-head"><h2>استيراد قائمة مكتوبة</h2><span class="hint">paste &amp; parse</span></div>
+        <div class="card-body">
+          <p class="note">الصق التاسكات بنفس الصيغة المعتادة (كل تاسك يفصله سطر فارغ) وسيتم تحويلها إلى سجلات قابلة للتعديل والتصدير.</p>
+          <div class="field">
+            <textarea class="in" id="imp" placeholder="Part number: 153302779&#10;Work order: 002866&#10;Layers: From 7.1 to 13.4&#10;Date: 6-7-2026&#10;Start 15:00&#10;Stop:20:30"></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button" id="do-import">استيراد</button>
+            <button class="btn ghost" type="button" id="restore">استعادة نسخة JSON</button>
+            <button class="btn danger" type="button" id="wipe" style="margin-inline-start:auto">حذف كل السجل</button>
+          </div>
+          <input type="file" id="file" accept="application/json,.json" hidden>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+var KEY="layup-log-v1", THEME_KEY="layup-log-theme";
+var tasks=[], editingId=null, scope="layers";
+
+/* ---------- helpers ---------- */
+function $(s,r){return (r||document).querySelector(s);}
+function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function pad(n){return (n<10?"0":"")+n;}
+function todayISO(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function fmtDate(iso){
+  if(!iso) return "";
+  var p=iso.split("-"); if(p.length!==3) return iso;
+  return parseInt(p[2],10)+"-"+parseInt(p[1],10)+"-"+p[0];
+}
+var AR_DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+function weekday(iso){
+  var p=iso.split("-"); if(p.length!==3) return "";
+  var d=new Date(+p[0],+p[1]-1,+p[2]);
+  return isNaN(d.getTime())?"":AR_DAYS[d.getDay()];
+}
+function toMin(t){
+  if(!t) return null;
+  var m=/^(\d{1,2}):(\d{2})$/.exec(t.trim());
+  if(!m) return null;
+  return (+m[1])*60 + (+m[2]);
+}
+function durMin(t){
+  var a=toMin(t.start), b=toMin(t.stop);
+  if(a==null||b==null) return 0;
+  var d=b-a; if(d<0) d+=24*60;
+  return d;
+}
+function fmtDur(m){
+  if(!m) return "0h";
+  var h=Math.floor(m/60), r=m%60;
+  return (h?h+"h":"") + (r?(h?" ":"")+r+"m":"");
+}
+function parseTime(v){
+  if(!v) return "";
+  var m=/(\d{1,2})\s*[:.٫]\s*(\d{1,2})/.exec(v);
+  if(m) return pad(Math.min(23,+m[1]))+":"+pad(Math.min(59,+m[2]));
+  m=/^\s*(\d{1,2})\s*$/.exec(v);
+  if(m) return pad(Math.min(23,+m[1]))+":00";
+  return "";
+}
+function parseDate(v){
+  if(!v) return "";
+  v=v.trim();
+  var m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(v);
+  if(m) return m[1]+"-"+pad(+m[2])+"-"+pad(+m[3]);
+  m=/^(\d{1,2})\s*[-\/.]\s*(\d{1,2})\s*[-\/.]\s*(\d{2,4})$/.exec(v);
+  if(m){
+    var y=+m[3]; if(y<100) y+=2000;
+    return y+"-"+pad(+m[2])+"-"+pad(+m[1]);
+  }
+  return "";
+}
+var toastT;
+function toast(msg){
+  var el=$("#toast"); el.textContent=msg; el.classList.add("on");
+  clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove("on");},2200);
+}
+
+/* ---------- storage ---------- */
+function load(){
+  try{ var raw=localStorage.getItem(KEY); tasks = raw?JSON.parse(raw):[]; }
+  catch(e){ tasks=[]; }
+  if(!Array.isArray(tasks)) tasks=[];
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(tasks)); }
+  catch(e){ toast("تعذّر الحفظ في المتصفح — خذ نسخة احتياطية"); }
+}
+
+/* ---------- text rendering ---------- */
+function scopeLine(t){
+  if(t.scope==="final") return "Final bag";
+  if(t.scope==="rebag") return "Rebag";
+  if(t.scope==="other") return (t.text||"").trim();
+  var f=(t.from||"").trim(), to=(t.to||"").trim();
+  if(!f && !to) return "";
+  if(f && to) return "Layers: From "+f+" to "+to;
+  return "Layers: "+(f||to);
+}
+function taskToText(t){
+  var L=[], pairs=(t.pairs&&t.pairs.length)?t.pairs:[{part:"",wo:""}];
+  pairs.forEach(function(p){
+    L.push("Part number:"+(p.part?" "+p.part:""));
+    L.push("Work order:"+(p.wo?" "+p.wo:""));
+  });
+  var s=scopeLine(t); if(s) L.push(s);
+  L.push("Date: "+fmtDate(t.date));
+  if(t.start) L.push("Start "+t.start);
+  if(t.stop)  L.push("Stop:"+t.stop);
+  if(t.note)  L.push(t.note);
+  return L.join("\n");
+}
+function sortAsc(a,b){
+  if(a.date!==b.date) return a.date<b.date?-1:1;
+  var x=toMin(a.start), y=toMin(b.start);
+  if(x==null) x=9999; if(y==null) y=9999;
+  return x-y;
+}
+
+/* ---------- form: pair rows ---------- */
+function pairRow(part,wo){
+  var d=document.createElement("div");
+  d.className="pair";
+  d.innerHTML='<input type="text" dir="ltr" class="p-part" placeholder="Part number">'+
+              '<input type="text" dir="ltr" class="p-wo" placeholder="Work order">'+
+              '<button type="button" class="rm" title="حذف السطر" aria-label="حذف السطر">×</button>';
+  $(".p-part",d).value=part||"";
+  $(".p-wo",d).value=wo||"";
+  $(".rm",d).addEventListener("click",function(){
+    var box=$("#pairs");
+    if(box.children.length>1) d.remove();
+    else { $(".p-part",d).value=""; $(".p-wo",d).value=""; }
+  });
+  return d;
+}
+function setPairs(list){
+  var box=$("#pairs"); box.innerHTML="";
+  if(!list || !list.length) list=[{part:"",wo:""}];
+  list.forEach(function(p){ box.appendChild(pairRow(p.part,p.wo)); });
+}
+function readPairs(){
+  return $$("#pairs .pair").map(function(d){
+    return { part:$(".p-part",d).value.trim(), wo:$(".p-wo",d).value.trim() };
+  }).filter(function(p,i,arr){ return p.part||p.wo||arr.length===1; });
+}
+function setScope(s){
+  scope=s;
+  $$("#scope button").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.scope===s)); });
+  $("#f-layers").hidden = (s!=="layers");
+  $("#f-other").hidden  = (s!=="other");
+}
+function resetForm(){
+  editingId=null;
+  document.body.classList.remove("is-editing");
+  $("#form-title").textContent="تسجيل تاسك جديد";
+  $("#form-hint").textContent="new entry";
+  $("#submit-btn").textContent="حفظ التاسك";
+  setPairs(null); setScope("layers");
+  $("#from").value=""; $("#to").value=""; $("#othertext").value="";
+  $("#start").value=""; $("#stop").value=""; $("#note").value="";
+  if(!$("#date").value) $("#date").value=todayISO();
+}
+function fillForm(t){
+  editingId=t.id;
+  document.body.classList.add("is-editing");
+  $("#form-title").textContent="تعديل تاسك";
+  $("#form-hint").textContent="editing";
+  $("#submit-btn").textContent="تحديث التاسك";
+  setPairs(t.pairs); setScope(t.scope||"layers");
+  $("#from").value=t.from||""; $("#to").value=t.to||""; $("#othertext").value=t.text||"";
+  $("#date").value=t.date||""; $("#start").value=t.start||""; $("#stop").value=t.stop||"";
+  $("#note").value=t.note||"";
+  window.scrollTo({top:0, behavior:"smooth"});
+  $("#pairs .p-part").focus();
+}
+
+/* ---------- list ---------- */
+function noteClass(n){
+  return /hold/i.test(n) ? "hold" : "warn";
+}
+function render(){
+  var q=$("#search").value.trim().toLowerCase();
+  var rows=tasks.slice().sort(sortAsc).reverse();
+  if(q){
+    rows=rows.filter(function(t){
+      var hay=[scopeLine(t), t.note||"", t.date||""].concat(
+        (t.pairs||[]).map(function(p){return p.part+" "+p.wo;})).join(" ").toLowerCase();
+      return hay.indexOf(q)>-1;
+    });
+  }
+  var box=$("#list");
+  if(!rows.length){
+    box.innerHTML='<div class="empty">'+(tasks.length?"لا نتائج مطابقة للبحث.":"لا توجد تاسكات بعد — سجّل أول تاسك من النموذج، أو استورد قائمتك الجاهزة من تبويب «استيراد».")+'</div>';
+    updateStats(); return;
+  }
+  var html="", curDate=null, buf=[], groups=[];
+  rows.forEach(function(t){
+    if(t.date!==curDate){ curDate=t.date; buf=[]; groups.push({date:curDate, items:buf}); }
+    buf.push(t);
+  });
+  groups.forEach(function(g){
+    var mins=g.items.reduce(function(a,t){return a+durMin(t);},0);
+    html+='<div class="daygroup"><div class="dayhead">'+
+          '<span class="d">'+esc(fmtDate(g.date))+'</span>'+
+          '<span class="w">'+esc(weekday(g.date))+'</span>'+
+          '<span class="t">'+esc(fmtDur(mins))+' · '+g.items.length+' تاسك</span></div>';
+    g.items.forEach(function(t){
+      var pn="";
+      (t.pairs||[]).forEach(function(p){
+        if(!p.part && !p.wo) return;
+        pn+='<span class="kv"><i>P/N</i> '+esc(p.part||"—")+' &nbsp;<i>W/O</i> '+esc(p.wo||"—")+'</span>';
+      });
+      if(!pn) pn='<span class="kv"><i>P/N</i> — &nbsp;<i>W/O</i> —</span>';
+      var d=durMin(t);
+      html+='<article class="task" data-id="'+esc(t.id)+'">'+
+        '<div class="main">'+
+          '<div class="pn">'+pn+'</div>'+
+          '<div class="scope">'+(scopeLine(t)?esc(scopeLine(t)):'<em>بدون وصف</em>')+'</div>'+
+          '<div class="times">'+
+            '<span>Start <b>'+esc(t.start||"—")+'</b></span>'+
+            '<span>Stop <b>'+esc(t.stop||"—")+'</b></span>'+
+            (d?'<span>المدة <b>'+esc(fmtDur(d))+'</b></span>':'')+
+          '</div>'+
+          (t.note?'<span class="chip '+noteClass(t.note)+'">'+esc(t.note)+'</span>':'')+
+        '</div>'+
+        '<div class="rowbtns">'+
+          '<button type="button" data-act="edit" title="تعديل" aria-label="تعديل">✎</button>'+
+          '<button type="button" data-act="dup" title="تكرار" aria-label="تكرار">⧉</button>'+
+          '<button type="button" class="del" data-act="del" title="حذف" aria-label="حذف">🗑</button>'+
+        '</div>'+
+      '</article>';
+    });
+    html+='</div>';
+  });
+  box.innerHTML=html;
+  updateStats();
+}
+function updateStats(){
+  var days={}, mins=0;
+  tasks.forEach(function(t){ days[t.date]=1; mins+=durMin(t); });
+  $("#st-tasks").textContent=tasks.length;
+  $("#st-days").textContent=Object.keys(days).length;
+  $("#st-hours").textContent=fmtDur(mins);
+}
+
+/* ---------- export ---------- */
+function inRange(t){
+  var a=$("#ex-from").value, b=$("#ex-to").value;
+  if(a && t.date < a) return false;
+  if(b && t.date > b) return false;
+  return true;
+}
+function buildExport(){
+  var rows=tasks.filter(inRange).sort(sortAsc);
+  var days={}, mins=0;
+  rows.forEach(function(t){ days[t.date]=1; mins+=durMin(t); });
+  $("#ex-count").textContent=rows.length;
+  $("#ex-days").textContent=Object.keys(days).length;
+  $("#ex-hours").textContent=fmtDur(mins);
+  var txt=rows.map(taskToText).join("\n\n");
+  $("#ex-out").textContent = txt || "لا توجد تاسكات ضمن هذه الفترة.";
+  return txt;
+}
+function preset(kind){
+  var d=new Date(), y=d.getFullYear(), m=d.getMonth(), from="", to="";
+  if(kind==="all"){ from=""; to=""; }
+  else if(kind==="today"){ from=to=todayISO(); }
+  else if(kind==="7"){
+    var s=new Date(d.getTime()-6*86400000);
+    from=s.getFullYear()+"-"+pad(s.getMonth()+1)+"-"+pad(s.getDate()); to=todayISO();
+  }
+  else if(kind==="month"){
+    from=y+"-"+pad(m+1)+"-01";
+    to=y+"-"+pad(m+1)+"-"+pad(new Date(y,m+1,0).getDate());
+  }
+  else if(kind==="lastmonth"){
+    var ly=(m===0)?y-1:y, lm=(m===0)?11:m-1;
+    from=ly+"-"+pad(lm+1)+"-01";
+    to=ly+"-"+pad(lm+1)+"-"+pad(new Date(ly,lm+1,0).getDate());
+  }
+  $("#ex-from").value=from; $("#ex-to").value=to;
+  buildExport();
+}
+function downloadFile(name, content, type){
+  try{
+    var blob=new Blob([content],{type:type||"text/plain;charset=utf-8"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
+  }catch(e){ toast("التنزيل غير مدعوم هنا — استخدم زر النسخ"); }
+}
+
+/* ---------- import parser ---------- */
+function parseBlocks(txt){
+  var out=[], skipped=0;
+  txt.replace(/\r/g,"").split(/\n\s*\n+/).forEach(function(block){
+    var lines=block.split("\n").map(function(s){return s.trim();}).filter(Boolean);
+    if(!lines.length) return;
+    var parts=[], wos=[], sc="", from="", to="", other="", date="", start="", stop="", notes=[], m;
+    lines.forEach(function(line){
+      if((m=/^part\s*(?:number|no\.?|#)?\s*:?\s*(.*)$/i.exec(line))){ parts.push(m[1].trim()); return; }
+      if((m=/^work\s*order\s*:?\s*(.*)$/i.exec(line))){ wos.push(m[1].trim()); return; }
+      if((m=/^date\s*:?\s*(.*)$/i.exec(line))){ date=parseDate(m[1]); return; }
+      if((m=/^start\s*:?\s*(.*)$/i.exec(line))){ start=parseTime(m[1]); return; }
+      if((m=/^stop\s*:?\s*(.*)$/i.exec(line))){ stop=parseTime(m[1]); return; }
+      if(/^final\s*bag\b/i.test(line)){ sc="final"; return; }
+      if(/^re-?\s*bag\b/i.test(line)){ sc="rebag"; return; }
+      if((m=/^layers?\s*:?\s*(.*)$/i.exec(line))){
+        var v=m[1].trim(), r=/^(?:from\s+)?(.+?)\s+to\s+(.+)$/i.exec(v);
+        if(r){ sc="layers"; from=r[1].trim(); to=r[2].trim(); }
+        else if(/^final\s*bag/i.test(v)){ sc="final"; }
+        else if(/^re-?\s*bag/i.test(v)){ sc="rebag"; }
+        else if(v){ sc="other"; other="Layers: "+v; }
+        return;
+      }
+      notes.push(line);
+    });
+    if(!date){ skipped++; return; }
+    var n=Math.max(parts.length, wos.length, 1), pairs=[];
+    for(var i=0;i<n;i++) pairs.push({ part:parts[i]||"", wo:wos[i]||"" });
+    out.push({
+      id:uid(), pairs:pairs, scope:sc||"other", from:from, to:to, text:other,
+      date:date, start:start, stop:stop, note:notes.join(" ").trim()
+    });
+  });
+  return { items:out, skipped:skipped };
+}
+
+/* ---------- events ---------- */
+$("#add-pair").addEventListener("click",function(){
+  $("#pairs").appendChild(pairRow("",""));
+  $$("#pairs .p-part").pop().focus();
+});
+$$("#scope button").forEach(function(b){
+  b.addEventListener("click",function(){ setScope(b.dataset.scope); });
+});
+$("#form").addEventListener("submit",function(e){
+  e.preventDefault();
+  var date=$("#date").value;
+  if(!date){ toast("اكتب التاريخ أولاً"); $("#date").focus(); return; }
+  var t={
+    id: editingId||uid(),
+    pairs: readPairs(),
+    scope: scope,
+    from: $("#from").value.trim(),
+    to: $("#to").value.trim(),
+    text: $("#othertext").value.trim(),
+    date: date,
+    start: $("#start").value,
+    stop: $("#stop").value,
+    note: $("#note").value.trim()
+  };
+  if(editingId){
+    tasks=tasks.map(function(x){ return x.id===editingId?t:x; });
+    toast("تم تحديث التاسك");
+  }else{
+    tasks.push(t);
+    toast("تم حفظ التاسك");
+  }
+  save(); render(); buildExport();
+  var keepDate=t.date;
+  resetForm();
+  $("#date").value=keepDate;
+});
+$("#clear-form").addEventListener("click",function(){ resetForm(); $("#date").value=todayISO(); });
+$("#cancel-edit").addEventListener("click",function(){ resetForm(); $("#date").value=todayISO(); });
+
+$("#list").addEventListener("click",function(e){
+  var btn=e.target.closest("button[data-act]"); if(!btn) return;
+  var id=e.target.closest(".task").dataset.id;
+  var t=tasks.filter(function(x){return x.id===id;})[0];
+  if(!t) return;
+  if(btn.dataset.act==="edit") fillForm(t);
+  else if(btn.dataset.act==="dup"){
+    var c=JSON.parse(JSON.stringify(t)); c.id=uid();
+    tasks.push(c); save(); render(); buildExport(); toast("تم تكرار التاسك");
+  }
+  else if(btn.dataset.act==="del"){
+    if(!confirm("حذف هذا التاسك نهائياً؟")) return;
+    tasks=tasks.filter(function(x){return x.id!==id;});
+    if(editingId===id) resetForm();
+    save(); render(); buildExport(); toast("تم الحذف");
+  }
+});
+$("#search").addEventListener("input", render);
+
+$$(".tabs button").forEach(function(b){
+  b.addEventListener("click",function(){
+    $$(".tabs button").forEach(function(x){ x.setAttribute("aria-selected", String(x===b)); });
+    $$(".pane").forEach(function(p){ p.classList.remove("on"); });
+    $("#pane-"+b.dataset.pane).classList.add("on");
+    if(b.dataset.pane==="export") buildExport();
+  });
+});
+$$(".presets button").forEach(function(b){
+  b.addEventListener("click",function(){ preset(b.dataset.preset); });
+});
+$("#ex-from").addEventListener("change", buildExport);
+$("#ex-to").addEventListener("change", buildExport);
+
+$("#copy").addEventListener("click",function(){
+  var txt=buildExport();
+  if(!txt){ toast("لا يوجد نص للنسخ"); return; }
+  function fallback(){
+    var ta=document.createElement("textarea");
+    ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toast("تم نسخ النص"); }
+    catch(e){ toast("انسخ النص يدوياً من المعاينة"); }
+    ta.remove();
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ toast("تم نسخ النص"); }, fallback);
+  } else fallback();
+});
+$("#download").addEventListener("click",function(){
+  var txt=buildExport();
+  if(!txt){ toast("لا يوجد نص للتنزيل"); return; }
+  var a=$("#ex-from").value||"all", b=$("#ex-to").value||"all";
+  downloadFile("tasks_"+a+"_"+b+".txt", txt);
+});
+$("#backup").addEventListener("click",function(){
+  downloadFile("tasks-backup-"+todayISO()+".json", JSON.stringify(tasks,null,2), "application/json");
+});
+$("#do-import").addEventListener("click",function(){
+  var raw=$("#imp").value;
+  if(!raw.trim()){ toast("الصق النص أولاً"); return; }
+  var res=parseBlocks(raw);
+  if(!res.items.length){ toast("لم يتم التعرف على أي تاسك"); return; }
+  tasks=tasks.concat(res.items);
+  save(); render(); buildExport();
+  $("#imp").value="";
+  toast("تم استيراد "+res.items.length+" تاسك"+(res.skipped?" · تم تجاهل "+res.skipped+" بدون تاريخ":""));
+  $$(".tabs button")[0].click();
+});
+$("#restore").addEventListener("click",function(){ $("#file").click(); });
+$("#file").addEventListener("change",function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var data=JSON.parse(r.result);
+      if(!Array.isArray(data)) throw new Error("bad");
+      data.forEach(function(t){ if(!t.id) t.id=uid(); });
+      tasks=data; save(); render(); buildExport();
+      toast("تمت استعادة "+data.length+" تاسك");
+      $$(".tabs button")[0].click();
+    }catch(err){ toast("الملف غير صالح"); }
+  };
+  r.readAsText(f);
+  e.target.value="";
+});
+$("#wipe").addEventListener("click",function(){
+  if(!tasks.length){ toast("السجل فارغ أصلاً"); return; }
+  if(!confirm("سيتم حذف كل التاسكات ("+tasks.length+"). متأكد؟")) return;
+  tasks=[]; save(); resetForm(); render(); buildExport(); toast("تم مسح السجل");
+});
+$("#theme").addEventListener("click",function(){
+  var cur=document.documentElement.getAttribute("data-theme");
+  var next = cur==="dark" ? "light" : cur==="light" ? "dark"
+    : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+});
+
+/* ---------- boot ---------- */
+try{
+  var th=localStorage.getItem(THEME_KEY);
+  if(th) document.documentElement.setAttribute("data-theme", th);
+}catch(e){}
+load();
+resetForm();
+$("#date").value=todayISO();
+render();
+buildExport();
+})();
+</script>
+</body>
+</html>
