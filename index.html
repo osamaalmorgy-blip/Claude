@@ -6,7 +6,7 @@
 <title>سجل التاسكات اليومية</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
   --ground:#EFF3F3; --surface:#FFFFFF; --sunken:#E5EBEB; --line:#D2DBDB; --line-soft:#E3E9E9;
@@ -17,7 +17,7 @@
   --ok:#2F6B44;
   --shadow:0 1px 2px rgba(16,32,32,.05), 0 8px 24px -16px rgba(16,32,32,.35);
   --r:10px;
-  --sans:"IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sans:"Almarai", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark){
@@ -68,7 +68,7 @@ header.top{
   font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; text-transform:uppercase;
   color:var(--ink-2);
 }
-.brand h1{margin:0; font-size:19px; font-weight:700; letter-spacing:-.01em}
+.brand h1{margin:0; font-size:19px; font-weight:800; letter-spacing:-.01em}
 .stats{display:flex; gap:0; align-items:stretch; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; background:var(--sunken)}
 .stat{padding:6px 14px; display:flex; flex-direction:column; align-items:center; min-width:76px; background:var(--surface)}
 .stat + .stat{border-inline-start:1px solid var(--line)}
@@ -94,7 +94,7 @@ header.top{
   padding:14px 16px; border-bottom:1px solid var(--line-soft);
   display:flex; align-items:center; gap:10px;
 }
-.card-head h2{margin:0; font-size:14px; font-weight:600}
+.card-head h2{margin:0; font-size:14px; font-weight:700}
 .card-head .hint{margin-inline-start:auto; font-size:11.5px; color:var(--ink-3); font-family:var(--mono)}
 .card-body{padding:16px}
 
@@ -123,19 +123,19 @@ input[dir=ltr]{font-family:var(--mono); font-variant-numeric:tabular-nums}
 .pair .rm:hover{color:var(--danger); border-color:var(--danger)}
 .linkbtn{
   background:none; border:none; color:var(--accent); cursor:pointer; padding:2px 0;
-  font-size:12.5px; font-weight:600;
+  font-size:12.5px; font-weight:700;
 }
 .linkbtn:hover{text-decoration:underline}
 .seg{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; background:var(--sunken); padding:4px; border-radius:10px; border:1px solid var(--line)}
 .seg button{
   border:none; background:transparent; padding:7px 4px; border-radius:7px; cursor:pointer;
-  font-size:12.5px; color:var(--ink-2); font-weight:500;
+  font-size:12.5px; color:var(--ink-2); font-weight:400;
 }
-.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); font-weight:700}
 .two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .btn{
   border:1px solid transparent; border-radius:9px; padding:10px 16px; cursor:pointer;
-  font-weight:600; font-size:14px; background:var(--accent); color:var(--accent-ink);
+  font-weight:700; font-size:14px; background:var(--accent); color:var(--accent-ink);
 }
 .btn:hover{filter:brightness(1.06)}
 .btn.ghost{background:transparent; border-color:var(--line); color:var(--ink-2)}
@@ -152,7 +152,7 @@ body.is-editing .editing-flag{display:flex}
 .tabs{display:flex; gap:2px; padding:4px; background:var(--sunken); border-radius:10px; border:1px solid var(--line)}
 .tabs button{
   border:none; background:transparent; cursor:pointer; padding:8px 16px; border-radius:7px;
-  font-size:13px; font-weight:600; color:var(--ink-2);
+  font-size:13px; font-weight:700; color:var(--ink-2);
 }
 .tabs button[aria-selected="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
 .pane{display:none}
