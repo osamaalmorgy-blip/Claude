@@ -674,7 +674,7 @@ function preset(kind){
   $("#ex-from").value=from; $("#ex-to").value=to;
   buildExport();
 }
-function downloadFile(name, content, type){
+function blobSave(name, content, type){
   try{
     var blob=new Blob([content],{type:type||"text/plain;charset=utf-8"});
     var url=URL.createObjectURL(blob);
@@ -682,6 +682,28 @@ function downloadFile(name, content, type){
     a.href=url; a.download=name; document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
   }catch(e){ toast("التنزيل غير مدعوم هنا — استخدم زر النسخ"); }
+}
+/* على claude.ai لا يستطيع الملف التنزيل مباشرة، فنستخدم واجهة الحفظ إن وُجدت */
+var saveReady=(function(){
+  try{
+    if(window.claude && typeof window.claude.use==="function"){
+      return window.claude.use("downloads").then(function(ns){ return ns; }, function(){ return null; });
+    }
+  }catch(e){}
+  return Promise.resolve(null);
+})();
+function downloadFile(name, content, type){
+  saveReady.then(function(ns){
+    if(!ns || !ns.save){ blobSave(name, content, type); return; }
+    ns.save({ filename:name, data:content }).then(
+      function(){ toast("تم حفظ الملف"); },
+      function(err){
+        var c=err&&err.code;
+        if(c==="declined") return;
+        if(c==="rate_limited"){ toast("انتظر لحظة ثم أعد المحاولة"); return; }
+        blobSave(name, content, type);
+      });
+  });
 }
 
 /* ---------- import parser ---------- */
