@@ -842,22 +842,49 @@ var RE={
   final : /^(?:final\s*bag|finalbag|f\s*\/?\s*b|الكيس\s*النهائي|كيس\s*نهائي)\s*$/i,
   rebag : /^(?:re\s*-?\s*bag|إعادة\s*تكييس|اعادة\s*تكييس)\s*$/i,
   range : /^(?:from\s+)?(\d[\w.\-\/]*)\s+(?:to|→|=>|حتى|إلى|الى)\s+(.+)$/i,
-  sep   : /^[-=_*.·•–—\s]+$/
+  sep   : /^[-=_*.·•–—`~#\s]+$/
 };
 /* أسطر قد تحمل أكثر من حقل: "Start 15:00 Stop:20:30" */
 var SPLIT=/\s+(?=(?:part\s*number|work\s*order|p\s*\/\s*n|w\s*\/\s*o|date|start\s*time|stop|finish(?:ed)?\s*time)\b\s*:?\s*\S)/i;
 
+var LABEL_START=/^(?:part|p\s*\/\s*n|pn|work|w\s*\/\s*o|wo|date|day|start|stop|end|finish|layers?|ply|plies|final|re-?bag|from|to|till|until|رقم|أمر|امر|التاريخ|تاريخ|اليوم|بداية|نهاية|الطبقات|طبقات|طبقة|الكيس|كيس)/i;
 function prepLines(txt){
-  var out=[];
+  var out=[], inFence=false;
   normDigits(txt).replace(/\r/g,"").split("\n").forEach(function(raw){
-    var line=raw.replace(/^[\s•·*>–—]+/,"").replace(/\s+$/,"");
+    var line=raw;
+    if(/^\s*(?:```|~~~)/.test(line)){ inFence=!inFence; return; }   /* سياج كود من رد Claude */
+    line=line.replace(/`/g,"")                                        /* علامات كود مضمّنة */
+             .replace(/\*\*|__/g,"")                                  /* غامق ماركداون */
+             .replace(/^[\s•·*>–—#]+/,"")                             /* نقاط وعناوين */
+             .replace(/\s+$/,"");
+    var m=/^(\d{1,3})[.)]\s+(\S.*)$/.exec(line);                     /* ترقيم قائمة قبل حقل */
+    if(m && LABEL_START.test(m[2])) line=m[2];
     if(!line.trim()){ out.push(""); return; }
     line.split(SPLIT).forEach(function(piece){
-      piece=piece.trim();
+      piece=piece.trim().replace(/[:：]\s*$/, ":");
       if(piece) out.push(piece);
     });
   });
   return out;
+}
+/* هل السطر الفارغ يفصل بين التاسكات في هذا النص؟ (يعتمد على شكل النص نفسه) */
+function blankSeparates(lines){
+  var blocks=[], cur=[], any=0, whole=0;
+  lines.forEach(function(l){
+    if(l===""){ if(cur.length){ blocks.push(cur); cur=[]; } } else cur.push(l);
+  });
+  if(cur.length) blocks.push(cur);
+  blocks.forEach(function(b){
+    var hasDate=false, hasId=false;
+    b.forEach(function(l){
+      if(RE.date.test(l)) hasDate=true;
+      if(RE.part.test(l)||RE.partAr.test(l)||RE.wo.test(l)||RE.layers.test(l)||
+         RE.final.test(l)||RE.rebag.test(l)) hasId=true;
+    });
+    if(hasDate||hasId) any++;
+    if(hasDate&&hasId) whole++;
+  });
+  return any>=2 && (whole/any)>=0.7;
 }
 function cleanVal(v){
   v=String(v==null?"":v).trim().replace(/^[:،\-–\s]+/,"").replace(/[:،\s]+$/,"").trim();
@@ -872,22 +899,23 @@ function firstVal(m){                       /* أول مجموعة غير فار
 }
 function parseInput(txt){
   var recs=[], cur=null, ignored=[];
-  function fresh(){ return {parts:[],wos:[],scope:"",from:"",to:"",text:"",date:"",start:"",stop:"",notes:[]}; }
-  function timed(r){ return !!(r && (r.date||r.start||r.stop)); }
+  function fresh(){ return {parts:[],wos:[],scope:"",from:"",to:"",text:"",date:"",start:"",stop:"",dateSeen:false,notes:[]}; }
+  function timed(r){ return !!(r && (r.date||r.dateSeen||r.start||r.stop)); }
   function identified(r){ return !!(r && (r.parts.length||r.wos.length||r.scope)); }
   function notesOnly(r){ return !!(r && r.notes.length && !r.parts.length && !r.wos.length && !r.scope); }
   function flush(){
     if(cur){
-      if(cur.parts.length||cur.wos.length||cur.scope||cur.date||cur.start||cur.stop) recs.push(cur);
+      if(cur.parts.length||cur.wos.length||cur.scope||cur.date||cur.dateSeen||cur.start||cur.stop) recs.push(cur);
       else if(cur.notes.length) ignored=ignored.concat(cur.notes);
     }
     cur=null;
   }
   function need(){ if(!cur) cur=fresh(); return cur; }
 
-  prepLines(txt).forEach(function(line){
+  var lines=prepLines(txt), blankSep=blankSeparates(lines);
+  lines.forEach(function(line){
     var m, v;
-    if(line===""){ return; }                       /* الأسطر الفارغة لا تفصل: قد تكون داخل التاسك */
+    if(line===""){ if(blankSep) flush(); return; } /* يفصل فقط إذا كان هذا شكل النص */
     if(RE.sep.test(line)){ flush(); return; }
     if(RE.name.test(line)){ flush(); return; }     /* سطر الاسم: بداية تاسك جديد ويُتجاهل */
     if(RE.lastPly.test(line)){ return; }           /* رقم آخر Ply: يُتجاهل */
@@ -920,9 +948,11 @@ function parseInput(txt){
       return;
     }
     if((m=RE.date.exec(line))){
-      var d=parseDate(m[1]);
-      if(d){ if(cur && cur.date) flush(); need().date=d; }
-      else need().notes.push(line);
+      var raw=cleanVal(m[1]), d=parseDate(raw);
+      if(cur && (cur.date||cur.dateSeen)) flush();
+      need().dateSeen=true;
+      if(d) cur.date=d;
+      else if(raw && !/^[?؟\-—_.\s]*$/.test(raw)) cur.notes.push(line);   /* «Date: ???» تعني بلا تاريخ */
       return;
     }
     if((m=RE.start.exec(line))){
@@ -1114,6 +1144,8 @@ function claudePrompt(text){
     "- أي كلام آخر (تأخير، حجز جودة، ملاحظة) اجعله السطر الأخير في التاسك كما هو.",
     "- تجاهل سطر الاسم، وتجاهل «رقم آخر Ply»؛ نهاية العمل هي «نهاية العمل عند الـ Ply».",
     "- إذا لم يذكر النص وقت انتهاء، احذف سطر Stop. ولا تخترع أي قيمة غير موجودة.",
+    "- كل تاسك لا بد أن يحتوي سطر Date. إذا لم تجد تاريخاً لتاسك، اكتب: Date: ??? ولا تحذف السطر.",
+    "- أرسل النتيجة نصاً عادياً فقط: بلا ``` وبلا ترقيم وبلا تنسيق غامق وبلا مقدمة أو خاتمة.",
     "",
     "النص:",
     "-----",
@@ -1189,7 +1221,9 @@ function previewImport(){
   $("#imp-dup").textContent=dup;
   $("#imp-undated").textContent=undated;
   $("#imp-out").textContent = res.items.length
-    ? res.items.slice().sort(sortAsc).map(taskToText).join("\n\n")
+    ? res.items.slice().sort(sortAsc).map(function(t){
+        return (t.date ? "" : "⚠ بدون تاريخ — عدّله بعد الاستيراد\n") + taskToText(t);
+      }).join("\n\n")
     : (raw.trim() ? "لم يتم التعرف على أي تاسك في هذا النص." : "الصق النص وستظهر هنا التاسكات بعد تقسيمها.");
   $("#imp-ignored").hidden = !res.ignored.length;
   $("#imp-ignored").textContent = res.ignored.length
