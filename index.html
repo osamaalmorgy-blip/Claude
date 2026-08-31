@@ -148,6 +148,12 @@ input[dir=ltr]{font-family:var(--mono); font-variant-numeric:tabular-nums}
   border:1px solid var(--warn); border-radius:9px; padding:8px 12px; margin-bottom:14px; font-size:12.5px;
 }
 body.is-editing .editing-flag{display:flex}
+.dup-flag{
+  display:flex; align-items:flex-start; gap:8px; background:var(--danger-soft); color:var(--danger);
+  border:1px solid var(--danger); border-radius:9px; padding:9px 12px; margin-bottom:14px;
+  font-size:12.5px; line-height:1.5;
+}
+.dup-flag b{font-family:var(--mono); font-weight:600}
 
 /* ---------- tabs ---------- */
 .tabs{display:flex; gap:2px; padding:4px; background:var(--sunken); border-radius:10px; border:1px solid var(--line)}
@@ -285,6 +291,8 @@ textarea.in{
       <span class="hint" id="form-hint">new entry</span>
     </div>
     <div class="card-body">
+
+      <div class="dup-flag" id="dup-flag" hidden></div>
 
       <div class="editing-flag">
         <span>أنت تعدّل تاسك محفوظ</span>
@@ -469,6 +477,7 @@ textarea.in{
             <span>جديد: <b id="imp-new">0</b></span>
             <span>مكرر: <b id="imp-dup">0</b></span>
             <span>بدون تاريخ: <b id="imp-undated">0</b></span>
+            <span style="color:var(--danger)">مسجّل سابقاً: <b id="imp-known">0</b></span>
           </div>
           <p class="note" id="imp-ignored" hidden></p>
           <div class="actions">
@@ -585,7 +594,7 @@ function toast(msg){
 
 /* ---------- اللغة / language ---------- */
 var LANG_STORE="layup-log-lang", LANG="ar";
-var EN={"سجل التاسكات اليومية": "Daily Task Log", "تاسك": "tasks", "يوم": "days", "ساعات": "hours", "تبديل الوضع الليلي": "Toggle dark mode", "تسجيل تاسك جديد": "New task", "تعديل تاسك": "Edit task", "أنت تعدّل تاسك محفوظ": "Editing a saved task", "إلغاء التعديل": "Cancel", "+ إضافة رقم قطعة آخر": "+ Add another part number", "نوع العمل": "Work type", "أخرى": "Other", "من طبقة / إلى طبقة": "From layer / to layer", "وصف العمل": "Work description", "ملاحظة (اختياري)": "Note (optional)", "حفظ التاسك": "Save task", "تحديث التاسك": "Update task", "تفريغ": "Clear", "حذف السطر": "Remove row", "السجل": "Log", "تصدير": "Export", "استيراد": "Import", "بحث برقم القطعة أو أمر الشغل أو الملاحظة…": "Search by part number, work order or note…", "حذف كل السجل": "Delete all tasks", "تعديل": "Edit", "تكرار": "Duplicate", "حذف": "Delete", "المدة": "Duration", "بدون وصف": "No description", "بدون تاريخ": "No date", "أضف التاريخ ليدخل في التصدير": "Add a date to include it in exports", " تاسك": " tasks", "لا نتائج مطابقة للبحث.": "No matches.", "لا توجد تاسكات بعد — سجّل أول تاسك من النموذج، أو استورد قائمتك الجاهزة من تبويب «استيراد».": "No tasks yet — add your first one in the form, or import your existing list from the Import tab.", "تصدير كنص حسب التاريخ": "Export as text by date", "من تاريخ": "From date", "إلى تاريخ": "To date", "الكل": "All", "اليوم": "Today", "آخر ٧ أيام": "Last 7 days", "هذا الشهر": "This month", "الشهر الماضي": "Last month", "التاسكات:": "Tasks:", "الأيام:": "Days:", "إجمالي الوقت:": "Total time:", "بدون تاريخ (لا تُصدَّر):": "Undated (not exported):", "نسخ النص": "Copy text", "تنزيل ملف .txt": "Download .txt", "نسخة احتياطية JSON": "JSON backup", "لا توجد تاسكات ضمن هذه الفترة.": "No tasks in this date range.", "استيراد قائمة مكتوبة": "Import a written list", "تحليل بواسطة Claude": "Parse with Claude", "غير مفعّل": "not set up", "انسخ الطلب وافتح Claude": "Copy prompt & open Claude", "تحليل تلقائي بالمفتاح": "Automatic (API key)", "الإعدادات": "Settings", "الموديل": "Model", "Claude Opus 5 — الأدق": "Claude Opus 5 — most accurate", "Claude Sonnet 5 — أسرع وأقل تكلفة": "Claude Sonnet 5 — faster and cheaper", "حفظ الإعدادات": "Save settings", "حذف المفتاح": "Delete key", "النص الملصوق": "Pasted text", "بعد التقسيم": "Parsed result", "· تحليل محلي": "· local parser", "· تحليل Claude (": "· Claude parse (", "مقروء:": "Read:", "جديد:": "New:", "مكرر:": "Duplicate:", "بدون تاريخ:": "Undated:", "استيراد الجديد": "Import new", "استعادة نسخة JSON": "Restore JSON backup", "الصق النص وستظهر هنا التاسكات بعد تقسيمها.": "Paste your text and the parsed tasks appear here.", "لم يتم التعرف على أي تاسك في هذا النص.": "No tasks recognised in this text.", "أسطر لم تُستخدم: ": "Unused lines: ", "⚠ بدون تاريخ — عدّله بعد الاستيراد\\n": "⚠ No date — edit it after importing\\n", "اكتب التاريخ أولاً": "Enter the date first", "تم حفظ التاسك": "Task saved", "تم تحديث التاسك": "Task updated", "تم تكرار التاسك": "Task duplicated", "تم الحذف": "Deleted", "حذف هذا التاسك نهائياً؟": "Delete this task permanently?", "السجل فارغ أصلاً": "The log is already empty", "سيتم حذف كل التاسكات (": "This will delete all tasks (", ") نهائياً، ولا يمكن التراجع.\\n": ") permanently. This cannot be undone.\\n", "خذ نسخة احتياطية JSON أولاً إن أردت. متأكد؟": "Take a JSON backup first if you want. Continue?", "تم مسح السجل": "Log cleared", "تعذّر الحفظ في المتصفح — خذ نسخة احتياطية": "Could not save in this browser — take a backup", "تم نسخ النص": "Text copied", "انسخ النص يدوياً من المعاينة": "Copy the text manually from the preview", "لا يوجد نص للنسخ": "Nothing to copy", "لا يوجد نص للتنزيل": "Nothing to download", "تم حفظ الملف": "File saved", "انتظر لحظة ثم أعد المحاولة": "Wait a moment and try again", "التنزيل غير مدعوم هنا — استخدم زر النسخ": "Downloads are blocked here — use Copy instead", "الصق النص أولاً": "Paste the text first", "الصق نصك في المربع أولاً": "Paste your text in the box first", "لم يتم التعرف على أي تاسك": "No tasks recognised", "كل التاسكات موجودة مسبقاً": "Every task is already in the log", "تم استيراد ": "Imported ", " · تجاهلت ": " · skipped ", " مكرر": " duplicates", " بدون تاريخ": " undated", "تمت استعادة ": "Restored ", "الملف غير صالح": "Invalid file", "أضف مفتاح Anthropic أولاً": "Add your Anthropic key first", "تم حفظ الإعدادات في هذا المتصفح": "Settings saved in this browser", "تم حذف المفتاح": "Key deleted", "تم حذف المفتاح من المتصفح": "Key deleted from this browser", "Claude قسّم ": "Claude split ", " تاسك — راجعها ثم استورد": " tasks — review, then import", "تعذّر التحليل: ": "Parsing failed: ", "انتهت مهلة الانتظار": "Request timed out", "المفتاح غير صحيح أو منتهي": "The key is invalid or expired", "تجاوزت حد الطلبات — انتظر قليلاً": "Rate limit reached — wait a little", "النموذج رفض معالجة هذا النص": "The model declined to process this text", "الاتصال بـ Claude محجوب في هذه الصفحة — افتحها من رابط GitHub Pages": "Network access is blocked on this page — open it from the GitHub Pages link", "تم نسخ الطلب — الصقه في Claude ثم أعد رده هنا": "Prompt copied — paste it into Claude, then bring the reply back here", "تم نسخ الطلب — افتح claude.ai والصقه هناك": "Prompt copied — open claude.ai and paste it there", "تعذّر النسخ تلقائياً — انسخ النص يدوياً": "Could not copy automatically — copy it manually", "جارٍ التحليل…": "Parsing\u2026"};
+var EN={"سجل التاسكات اليومية": "Daily Task Log", "تاسك": "tasks", "يوم": "days", "ساعات": "hours", "تبديل الوضع الليلي": "Toggle dark mode", "تسجيل تاسك جديد": "New task", "تعديل تاسك": "Edit task", "أنت تعدّل تاسك محفوظ": "Editing a saved task", "إلغاء التعديل": "Cancel", "+ إضافة رقم قطعة آخر": "+ Add another part number", "نوع العمل": "Work type", "أخرى": "Other", "من طبقة / إلى طبقة": "From layer / to layer", "وصف العمل": "Work description", "ملاحظة (اختياري)": "Note (optional)", "حفظ التاسك": "Save task", "تحديث التاسك": "Update task", "تفريغ": "Clear", "حذف السطر": "Remove row", "السجل": "Log", "تصدير": "Export", "استيراد": "Import", "بحث برقم القطعة أو أمر الشغل أو الملاحظة…": "Search by part number, work order or note…", "حذف كل السجل": "Delete all tasks", "تعديل": "Edit", "تكرار": "Duplicate", "حذف": "Delete", "المدة": "Duration", "بدون وصف": "No description", "بدون تاريخ": "No date", "أضف التاريخ ليدخل في التصدير": "Add a date to include it in exports", " تاسك": " tasks", "لا نتائج مطابقة للبحث.": "No matches.", "لا توجد تاسكات بعد — سجّل أول تاسك من النموذج، أو استورد قائمتك الجاهزة من تبويب «استيراد».": "No tasks yet — add your first one in the form, or import your existing list from the Import tab.", "تصدير كنص حسب التاريخ": "Export as text by date", "من تاريخ": "From date", "إلى تاريخ": "To date", "الكل": "All", "اليوم": "Today", "آخر ٧ أيام": "Last 7 days", "هذا الشهر": "This month", "الشهر الماضي": "Last month", "التاسكات:": "Tasks:", "الأيام:": "Days:", "إجمالي الوقت:": "Total time:", "بدون تاريخ (لا تُصدَّر):": "Undated (not exported):", "نسخ النص": "Copy text", "تنزيل ملف .txt": "Download .txt", "نسخة احتياطية JSON": "JSON backup", "لا توجد تاسكات ضمن هذه الفترة.": "No tasks in this date range.", "استيراد قائمة مكتوبة": "Import a written list", "تحليل بواسطة Claude": "Parse with Claude", "غير مفعّل": "not set up", "انسخ الطلب وافتح Claude": "Copy prompt & open Claude", "تحليل تلقائي بالمفتاح": "Automatic (API key)", "الإعدادات": "Settings", "الموديل": "Model", "Claude Opus 5 — الأدق": "Claude Opus 5 — most accurate", "Claude Sonnet 5 — أسرع وأقل تكلفة": "Claude Sonnet 5 — faster and cheaper", "حفظ الإعدادات": "Save settings", "حذف المفتاح": "Delete key", "النص الملصوق": "Pasted text", "بعد التقسيم": "Parsed result", "· تحليل محلي": "· local parser", "· تحليل Claude (": "· Claude parse (", "مقروء:": "Read:", "جديد:": "New:", "مكرر:": "Duplicate:", "بدون تاريخ:": "Undated:", "استيراد الجديد": "Import new", "استعادة نسخة JSON": "Restore JSON backup", "الصق النص وستظهر هنا التاسكات بعد تقسيمها.": "Paste your text and the parsed tasks appear here.", "لم يتم التعرف على أي تاسك في هذا النص.": "No tasks recognised in this text.", "أسطر لم تُستخدم: ": "Unused lines: ", "⚠ بدون تاريخ — عدّله بعد الاستيراد\\n": "⚠ No date — edit it after importing\\n", "اكتب التاريخ أولاً": "Enter the date first", "تم حفظ التاسك": "Task saved", "تم تحديث التاسك": "Task updated", "تم تكرار التاسك": "Task duplicated", "تم الحذف": "Deleted", "حذف هذا التاسك نهائياً؟": "Delete this task permanently?", "السجل فارغ أصلاً": "The log is already empty", "سيتم حذف كل التاسكات (": "This will delete all tasks (", ") نهائياً، ولا يمكن التراجع.\\n": ") permanently. This cannot be undone.\\n", "خذ نسخة احتياطية JSON أولاً إن أردت. متأكد؟": "Take a JSON backup first if you want. Continue?", "تم مسح السجل": "Log cleared", "تعذّر الحفظ في المتصفح — خذ نسخة احتياطية": "Could not save in this browser — take a backup", "تم نسخ النص": "Text copied", "انسخ النص يدوياً من المعاينة": "Copy the text manually from the preview", "لا يوجد نص للنسخ": "Nothing to copy", "لا يوجد نص للتنزيل": "Nothing to download", "تم حفظ الملف": "File saved", "انتظر لحظة ثم أعد المحاولة": "Wait a moment and try again", "التنزيل غير مدعوم هنا — استخدم زر النسخ": "Downloads are blocked here — use Copy instead", "الصق النص أولاً": "Paste the text first", "الصق نصك في المربع أولاً": "Paste your text in the box first", "لم يتم التعرف على أي تاسك": "No tasks recognised", "كل التاسكات موجودة مسبقاً": "Every task is already in the log", "تم استيراد ": "Imported ", " · تجاهلت ": " · skipped ", " مكرر": " duplicates", " بدون تاريخ": " undated", "تمت استعادة ": "Restored ", "الملف غير صالح": "Invalid file", "أضف مفتاح Anthropic أولاً": "Add your Anthropic key first", "تم حفظ الإعدادات في هذا المتصفح": "Settings saved in this browser", "تم حذف المفتاح": "Key deleted", "تم حذف المفتاح من المتصفح": "Key deleted from this browser", "Claude قسّم ": "Claude split ", " تاسك — راجعها ثم استورد": " tasks — review, then import", "تعذّر التحليل: ": "Parsing failed: ", "انتهت مهلة الانتظار": "Request timed out", "المفتاح غير صحيح أو منتهي": "The key is invalid or expired", "تجاوزت حد الطلبات — انتظر قليلاً": "Rate limit reached — wait a little", "النموذج رفض معالجة هذا النص": "The model declined to process this text", "الاتصال بـ Claude محجوب في هذه الصفحة — افتحها من رابط GitHub Pages": "Network access is blocked on this page — open it from the GitHub Pages link", "تم نسخ الطلب — الصقه في Claude ثم أعد رده هنا": "Prompt copied — paste it into Claude, then bring the reply back here", "تم نسخ الطلب — افتح claude.ai والصقه هناك": "Prompt copied — open claude.ai and paste it there", "تعذّر النسخ تلقائياً — انسخ النص يدوياً": "Could not copy automatically — copy it manually", "جارٍ التحليل…": "Parsing\u2026", "⚠ نفس القطعة وأمر الشغل ونفس الطبقات مسجّلة من قبل: ": "\u26a0 Same part, work order and layers already logged: ", "سُجّل هذا العمل من قبل بتاريخ ": "This work is already logged on ", " — نفس رقم القطعة وأمر الشغل ونفس الطبقات.\nهل تريد حفظه رغم ذلك؟": " — same part number, work order and layers.\nSave it anyway?", "⚠ مسجّل من قبل: ": "\u26a0 Already logged: ", "مسجّل سابقاً:": "Already logged:", " مسجّل سابقاً": " already logged"};
 var HTML_EN={"#imp-note": "Paste your tasks in any shape close to the usual one — with or without blank lines between them, in a different order, with short field names (<span dir=\"ltr\">P/N · W/O · FB</span>), dates as <span dir=\"ltr\">6-7-2026</span>, <span dir=\"ltr\">6/7/2026</span> or <span dir=\"ltr\">2026-07-06</span>, and Arabic or Latin digits. The parsed tasks appear on the right — review them, then import.", "#ai-how": "<b>No key needed:</b> press “Copy prompt &amp; open Claude” → paste it into your Claude conversation (Ctrl+V) → copy the reply → paste it into the “Pasted text” box here → “Import new”.<br><b>Automatic:</b> the second button sends the text itself without leaving the page, but needs an Anthropic API key from “Settings” (entirely optional).", "#ai-note": "The pasted text is sent to <span dir=\"ltr\">api.anthropic.com</span> for Claude to read and split, and the result is shown for review before anything is added. The key is stored in this browser only (it never reaches GitHub or anyone else), and every run is billed to your own Anthropic account."};
 var HTML_AR={}, i18nText=[], i18nAttr=[], i18nReady=false;
 function tr(ar){ return LANG==="en" ? (EN[ar]||ar) : ar; }
@@ -633,7 +642,7 @@ function applyLang(lang){
   });
   $("#lang").textContent = LANG==="en" ? "ع" : "EN";
   try{ localStorage.setItem(LANG_STORE, LANG); }catch(e){}
-  if(typeof render==="function"){ render(); buildExport(); previewImport(); aiRefresh(); }
+  if(typeof render==="function"){ render(); buildExport(); previewImport(); aiRefresh(); checkDup(); }
   if(editingId){ $("#form-title").textContent=tr("تعديل تاسك"); $("#submit-btn").textContent=tr("تحديث التاسك"); }
   else { $("#form-title").textContent=tr("تسجيل تاسك جديد"); $("#submit-btn").textContent=tr("حفظ التاسك"); }
 }
@@ -672,6 +681,42 @@ function taskToText(t){
   if(t.stop)  L.push("Stop:"+t.stop);
   if(t.note)  L.push(t.note);
   return L.join("\n");
+}
+/* ---------- قاعدة: نفس رقم القطعة + أمر الشغل + نفس الطبقات = مسجّل من قبل ---------- */
+function scopeKey(t){ return scopeLine(t).toLowerCase().replace(/\s+/g," ").trim(); }
+function pairKeys(t){
+  return (t.pairs||[]).filter(function(p){ return (p.part||"").trim(); })
+    .map(function(p){ return [(p.part||"").trim().toLowerCase(), (p.wo||"").trim().toLowerCase()]; });
+}
+function samePart(a,b){
+  return a[0]===b[0] && (!a[1] || !b[1] || a[1]===b[1]);   /* أمر شغل فارغ يُعتبر مطابقاً */
+}
+function findRecorded(task, list, excludeId){
+  var sk=scopeKey(task), mine=pairKeys(task);
+  if(!sk || !mine.length) return [];
+  return (list||[]).filter(function(o){
+    if(!o || (excludeId && o.id===excludeId)) return false;
+    if(scopeKey(o)!==sk) return false;
+    var his=pairKeys(o);
+    return mine.some(function(m){ return his.some(function(h){ return samePart(m,h); }); });
+  });
+}
+function recordedLabel(hits){
+  return hits.slice(0,3).map(function(o){
+    return fmtDate(o.date) || tr("بدون تاريخ");
+  }).join(" · ") + (hits.length>3 ? " …" : "");
+}
+function formTask(){
+  return { pairs:readPairs(), scope:scope, from:$("#from").value.trim(),
+           to:$("#to").value.trim(), text:$("#othertext").value.trim() };
+}
+function checkDup(){
+  var hits=findRecorded(formTask(), tasks, editingId), box=$("#dup-flag");
+  if(!hits.length){ box.hidden=true; box.textContent=""; return []; }
+  box.hidden=false;
+  box.innerHTML='<span>'+esc(tr("⚠ نفس القطعة وأمر الشغل ونفس الطبقات مسجّلة من قبل: "))+
+                '<b>'+esc(recordedLabel(hits))+'</b></span>';
+  return hits;
 }
 function sortAsc(a,b){
   var da=a.date||"9999-99-99", db=b.date||"9999-99-99";
@@ -723,6 +768,7 @@ function resetForm(){
   $("#from").value=""; $("#to").value=""; $("#othertext").value="";
   $("#start").value=""; $("#stop").value=""; $("#note").value="";
   if(!$("#date").value) $("#date").value=todayISO();
+  if($("#dup-flag")){ $("#dup-flag").hidden=true; $("#dup-flag").textContent=""; }
 }
 function fillForm(t){
   editingId=t.id;
@@ -736,6 +782,7 @@ function fillForm(t){
   $("#note").value=t.note||"";
   window.scrollTo({top:0, behavior:"smooth"});
   $("#pairs .p-part").focus();
+  checkDup();
 }
 
 /* ---------- list ---------- */
@@ -1307,39 +1354,52 @@ function previewImport(){
   var res = aiTasks ? { items:aiTasks, ignored:[] } : parseInput(raw);
   if(!aiTasks) $("#imp-src").textContent=tr("· تحليل محلي");
   var have={}; tasks.forEach(function(t){ have[taskKey(t)]=1; });
-  var dup=0, undated=0, fresh=[];
+  var dup=0, undated=0, known=0, fresh=[], pool=tasks.slice(), knownOf={};
   res.items.forEach(function(t){
     if(!t.date) undated++;
-    if(have[taskKey(t)]) dup++; else { have[taskKey(t)]=1; fresh.push(t); }
+    if(have[taskKey(t)]){ dup++; return; }
+    have[taskKey(t)]=1;
+    var hits=findRecorded(t, pool);
+    if(hits.length){ known++; knownOf[t.id]=recordedLabel(hits); }
+    pool.push(t);
+    fresh.push(t);
   });
   $("#imp-count").textContent=res.items.length;
   $("#imp-new").textContent=fresh.length;
   $("#imp-dup").textContent=dup;
   $("#imp-undated").textContent=undated;
+  $("#imp-known").textContent=known;
   $("#imp-out").textContent = res.items.length
     ? res.items.slice().sort(sortAsc).map(function(t){
-        return (t.date ? "" : tr("⚠ بدون تاريخ — عدّله بعد الاستيراد\n")) + taskToText(t);
+        return (t.date ? "" : tr("⚠ بدون تاريخ — عدّله بعد الاستيراد\n")) +
+               (knownOf[t.id] ? tr("⚠ مسجّل من قبل: ")+knownOf[t.id]+"\n" : "") +
+               taskToText(t);
       }).join("\n\n")
     : (raw.trim() ? tr("لم يتم التعرف على أي تاسك في هذا النص.") : tr("الصق النص وستظهر هنا التاسكات بعد تقسيمها."));
   $("#imp-ignored").hidden = !res.ignored.length;
   $("#imp-ignored").textContent = res.ignored.length
     ? tr("أسطر لم تُستخدم: ") + res.ignored.slice(0,6).join(" · ") + (res.ignored.length>6?" …":"")
     : "";
-  return { all:res.items, fresh:fresh, dup:dup, undated:undated };
+  return { all:res.items, fresh:fresh, dup:dup, undated:undated, known:known };
 }
 
 /* ---------- events ---------- */
 $("#add-pair").addEventListener("click",function(){
   $("#pairs").appendChild(pairRow("",""));
   $$("#pairs .p-part").pop().focus();
+  checkDup();
 });
+$("#form").addEventListener("input", checkDup);
 $$("#scope button").forEach(function(b){
-  b.addEventListener("click",function(){ setScope(b.dataset.scope); });
+  b.addEventListener("click",function(){ setScope(b.dataset.scope); checkDup(); });
 });
 $("#form").addEventListener("submit",function(e){
   e.preventDefault();
   var date=$("#date").value;
   if(!date){ toast(tr("اكتب التاريخ أولاً")); $("#date").focus(); return; }
+  var hits=checkDup();
+  if(hits.length && !confirm(tr("سُجّل هذا العمل من قبل بتاريخ ")+recordedLabel(hits)+
+      tr(" — نفس رقم القطعة وأمر الشغل ونفس الطبقات.\nهل تريد حفظه رغم ذلك؟"))) return;
   var t={
     id: editingId||uid(),
     pairs: readPairs(),
@@ -1454,7 +1514,8 @@ $("#do-import").addEventListener("click",function(){
   $("#imp").value=""; aiTasks=null; previewImport();
   toast(tr("تم استيراد ")+res.fresh.length+tr(" تاسك")+
         (res.dup?tr(" · تجاهلت ")+res.dup+tr(" مكرر"):"")+
-        (res.undated?" · "+res.undated+tr(" بدون تاريخ"):""));
+        (res.undated?" · "+res.undated+tr(" بدون تاريخ"):"")+
+        (res.known?" · "+res.known+tr(" مسجّل سابقاً"):""));
   $$(".tabs button")[0].click();
 });
 $("#restore").addEventListener("click",function(){ $("#file").click(); });
