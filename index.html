@@ -839,6 +839,8 @@ var RE={
   fromLay:/^(?:from|start(?:ing)?|beginning)\s*(?:the\s*)?(?:layer|ply)s?\s*[:،\-–]?\s*(.*)$|^بداية\s*(?:العمل)?[^:]*?(?:ply|layer|طبقة)\s*[:،\-–]?\s*(.*)$/i,
   toLay  :/^(?:to|till|until|up\s*to|finish(?:ed)?|final|end(?:ing)?|last)\s*(?:the\s*)?(?:layer|ply)s?\s*[:،\-–]?\s*(.*)$|^نهاية\s*(?:العمل)?[^:]*?(?:ply|layer|طبقة)\s*[:،\-–]?\s*(.*)$/i,
   layers: /^(?:from\s+)?(?:layers?|plies|ply|الطبقات|طبقات|طبقة)(?![A-Za-z])\s*[:،\-–]?\s*(.*)$/i,
+  count : /^\d+\s*(?:layers?|plies|ply|طبقات|طبقة)\b/i,      /* "7 layers from 9" عدد لا مدى */
+  bareNo: /^\d{8,12}$/,                                       /* رقم قطعة وحده بلا عنوان */
   final : /^(?:final\s*bag|finalbag|f\s*\/?\s*b|الكيس\s*النهائي|كيس\s*نهائي)\s*$/i,
   rebag : /^(?:re\s*-?\s*bag|إعادة\s*تكييس|اعادة\s*تكييس)\s*$/i,
   range : /^(?:from\s+)?(\d[\w.\-\/]*)\s+(?:to|→|=>|حتى|إلى|الى)\s+(.+)$/i,
@@ -934,6 +936,14 @@ function parseInput(txt){
     if((m=RE.fromLay.exec(line))){ setEdge("from", firstVal(m)); return; }
     if((m=RE.toLay.exec(line))){   setEdge("to",   firstVal(m)); return; }
 
+    if(RE.bareNo.test(line)){                     /* رقم قطعة مكتوب وحده */
+      if(identified(cur) && timed(cur)) flush(); else if(notesOnly(cur)) flush();
+      need().parts.push(line); return;
+    }
+    if(RE.count.test(line)){                      /* عدد الطبقات كما كُتب */
+      if(cur && cur.scope && timed(cur)) flush();
+      setScopeOn(need(),"other","","",line); return;
+    }
     if(RE.final.test(line)){ if(cur && cur.scope && timed(cur)) flush(); setScopeOn(need(),"final","",""); return; }
     if(RE.rebag.test(line)){ if(cur && cur.scope && timed(cur)) flush(); setScopeOn(need(),"rebag","",""); return; }
     if((m=RE.layers.exec(line))){
