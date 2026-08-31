@@ -79,6 +79,7 @@ header.top{
   width:38px; height:38px; display:grid; place-items:center; cursor:pointer; color:var(--ink-2);
 }
 .icon-btn:hover{border-color:var(--accent); color:var(--accent)}
+#lang{width:auto; padding:0 10px; font-size:12px; font-weight:700; font-family:var(--mono)}
 
 /* ---------- layout ---------- */
 .grid{display:grid; grid-template-columns:1fr; gap:18px; padding-top:18px}
@@ -268,6 +269,7 @@ textarea.in{
       <div class="stat"><b id="st-days" class="mono">0</b><span>يوم</span></div>
       <div class="stat"><b id="st-hours" class="mono">0h</b><span>ساعات</span></div>
     </div>
+    <button class="icon-btn" id="lang" title="العربية / English" aria-label="العربية / English">EN</button>
     <button class="icon-btn" id="theme" title="تبديل الوضع الليلي" aria-label="تبديل الوضع الليلي">◐</button>
   </div>
 </header>
@@ -407,7 +409,7 @@ textarea.in{
       <div class="card">
         <div class="card-head"><h2>استيراد قائمة مكتوبة</h2><span class="hint">paste &amp; parse</span></div>
         <div class="card-body">
-          <p class="note">الصق التاسكات بأي صيغة قريبة من المعتاد — بسطر فاصل أو بدونه، بترتيب مختلف، بأسماء حقول مختصرة
+          <p class="note" id="imp-note">الصق التاسكات بأي صيغة قريبة من المعتاد — بسطر فاصل أو بدونه، بترتيب مختلف، بأسماء حقول مختصرة
             (<span dir="ltr">P/N · W/O · FB</span>)، بتواريخ <span dir="ltr">6-7-2026</span> أو <span dir="ltr">6/7/2026</span> أو
             <span dir="ltr">2026-07-06</span>، وبأرقام عربية أو إنجليزية. يمين الصفحة تظهر التاسكات بعد تقسيمها، راجعها ثم استورد.</p>
           <div class="aibox">
@@ -428,7 +430,7 @@ textarea.in{
               من «الإعدادات» (اختياري تماماً).
             </p>
             <div id="ai-settings" hidden>
-              <p class="note">
+              <p class="note" id="ai-note">
                 يُرسَل النص الملصوق إلى <span dir="ltr">api.anthropic.com</span> ليفهمه Claude ويقسّمه، ثم تُعرض النتيجة
                 للمراجعة قبل الإضافة. المفتاح يُحفظ في هذا المتصفح فقط (لا يصل إلى GitHub ولا إلى أي جهة أخرى)،
                 وكل تحليل يُحسب على رصيد حسابك في Anthropic.
@@ -503,11 +505,10 @@ function fmtDate(iso){
   var p=iso.split("-"); if(p.length!==3) return iso;
   return parseInt(p[2],10)+"-"+parseInt(p[1],10)+"-"+p[0];
 }
-var AR_DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
 function weekday(iso){
   var p=iso.split("-"); if(p.length!==3) return "";
   var d=new Date(+p[0],+p[1]-1,+p[2]);
-  return isNaN(d.getTime())?"":AR_DAYS[d.getDay()];
+  return isNaN(d.getTime())?"":(LANG==="en"?DAYS_EN:DAYS_AR)[d.getDay()];
 }
 function toMin(t){
   if(!t) return null;
@@ -581,6 +582,62 @@ function toast(msg){
   clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove("on");},2200);
 }
 
+
+/* ---------- اللغة / language ---------- */
+var LANG_STORE="layup-log-lang", LANG="ar";
+var EN={"سجل التاسكات اليومية": "Daily Task Log", "تاسك": "tasks", "يوم": "days", "ساعات": "hours", "تبديل الوضع الليلي": "Toggle dark mode", "تسجيل تاسك جديد": "New task", "تعديل تاسك": "Edit task", "أنت تعدّل تاسك محفوظ": "Editing a saved task", "إلغاء التعديل": "Cancel", "+ إضافة رقم قطعة آخر": "+ Add another part number", "نوع العمل": "Work type", "أخرى": "Other", "من طبقة / إلى طبقة": "From layer / to layer", "وصف العمل": "Work description", "ملاحظة (اختياري)": "Note (optional)", "حفظ التاسك": "Save task", "تحديث التاسك": "Update task", "تفريغ": "Clear", "حذف السطر": "Remove row", "السجل": "Log", "تصدير": "Export", "استيراد": "Import", "بحث برقم القطعة أو أمر الشغل أو الملاحظة…": "Search by part number, work order or note…", "حذف كل السجل": "Delete all tasks", "تعديل": "Edit", "تكرار": "Duplicate", "حذف": "Delete", "المدة": "Duration", "بدون وصف": "No description", "بدون تاريخ": "No date", "أضف التاريخ ليدخل في التصدير": "Add a date to include it in exports", " تاسك": " tasks", "لا نتائج مطابقة للبحث.": "No matches.", "لا توجد تاسكات بعد — سجّل أول تاسك من النموذج، أو استورد قائمتك الجاهزة من تبويب «استيراد».": "No tasks yet — add your first one in the form, or import your existing list from the Import tab.", "تصدير كنص حسب التاريخ": "Export as text by date", "من تاريخ": "From date", "إلى تاريخ": "To date", "الكل": "All", "اليوم": "Today", "آخر ٧ أيام": "Last 7 days", "هذا الشهر": "This month", "الشهر الماضي": "Last month", "التاسكات:": "Tasks:", "الأيام:": "Days:", "إجمالي الوقت:": "Total time:", "بدون تاريخ (لا تُصدَّر):": "Undated (not exported):", "نسخ النص": "Copy text", "تنزيل ملف .txt": "Download .txt", "نسخة احتياطية JSON": "JSON backup", "لا توجد تاسكات ضمن هذه الفترة.": "No tasks in this date range.", "استيراد قائمة مكتوبة": "Import a written list", "تحليل بواسطة Claude": "Parse with Claude", "غير مفعّل": "not set up", "انسخ الطلب وافتح Claude": "Copy prompt & open Claude", "تحليل تلقائي بالمفتاح": "Automatic (API key)", "الإعدادات": "Settings", "الموديل": "Model", "Claude Opus 5 — الأدق": "Claude Opus 5 — most accurate", "Claude Sonnet 5 — أسرع وأقل تكلفة": "Claude Sonnet 5 — faster and cheaper", "حفظ الإعدادات": "Save settings", "حذف المفتاح": "Delete key", "النص الملصوق": "Pasted text", "بعد التقسيم": "Parsed result", "· تحليل محلي": "· local parser", "· تحليل Claude (": "· Claude parse (", "مقروء:": "Read:", "جديد:": "New:", "مكرر:": "Duplicate:", "بدون تاريخ:": "Undated:", "استيراد الجديد": "Import new", "استعادة نسخة JSON": "Restore JSON backup", "الصق النص وستظهر هنا التاسكات بعد تقسيمها.": "Paste your text and the parsed tasks appear here.", "لم يتم التعرف على أي تاسك في هذا النص.": "No tasks recognised in this text.", "أسطر لم تُستخدم: ": "Unused lines: ", "⚠ بدون تاريخ — عدّله بعد الاستيراد\\n": "⚠ No date — edit it after importing\\n", "اكتب التاريخ أولاً": "Enter the date first", "تم حفظ التاسك": "Task saved", "تم تحديث التاسك": "Task updated", "تم تكرار التاسك": "Task duplicated", "تم الحذف": "Deleted", "حذف هذا التاسك نهائياً؟": "Delete this task permanently?", "السجل فارغ أصلاً": "The log is already empty", "سيتم حذف كل التاسكات (": "This will delete all tasks (", ") نهائياً، ولا يمكن التراجع.\\n": ") permanently. This cannot be undone.\\n", "خذ نسخة احتياطية JSON أولاً إن أردت. متأكد؟": "Take a JSON backup first if you want. Continue?", "تم مسح السجل": "Log cleared", "تعذّر الحفظ في المتصفح — خذ نسخة احتياطية": "Could not save in this browser — take a backup", "تم نسخ النص": "Text copied", "انسخ النص يدوياً من المعاينة": "Copy the text manually from the preview", "لا يوجد نص للنسخ": "Nothing to copy", "لا يوجد نص للتنزيل": "Nothing to download", "تم حفظ الملف": "File saved", "انتظر لحظة ثم أعد المحاولة": "Wait a moment and try again", "التنزيل غير مدعوم هنا — استخدم زر النسخ": "Downloads are blocked here — use Copy instead", "الصق النص أولاً": "Paste the text first", "الصق نصك في المربع أولاً": "Paste your text in the box first", "لم يتم التعرف على أي تاسك": "No tasks recognised", "كل التاسكات موجودة مسبقاً": "Every task is already in the log", "تم استيراد ": "Imported ", " · تجاهلت ": " · skipped ", " مكرر": " duplicates", " بدون تاريخ": " undated", "تمت استعادة ": "Restored ", "الملف غير صالح": "Invalid file", "أضف مفتاح Anthropic أولاً": "Add your Anthropic key first", "تم حفظ الإعدادات في هذا المتصفح": "Settings saved in this browser", "تم حذف المفتاح": "Key deleted", "تم حذف المفتاح من المتصفح": "Key deleted from this browser", "Claude قسّم ": "Claude split ", " تاسك — راجعها ثم استورد": " tasks — review, then import", "تعذّر التحليل: ": "Parsing failed: ", "انتهت مهلة الانتظار": "Request timed out", "المفتاح غير صحيح أو منتهي": "The key is invalid or expired", "تجاوزت حد الطلبات — انتظر قليلاً": "Rate limit reached — wait a little", "النموذج رفض معالجة هذا النص": "The model declined to process this text", "الاتصال بـ Claude محجوب في هذه الصفحة — افتحها من رابط GitHub Pages": "Network access is blocked on this page — open it from the GitHub Pages link", "تم نسخ الطلب — الصقه في Claude ثم أعد رده هنا": "Prompt copied — paste it into Claude, then bring the reply back here", "تم نسخ الطلب — افتح claude.ai والصقه هناك": "Prompt copied — open claude.ai and paste it there", "تعذّر النسخ تلقائياً — انسخ النص يدوياً": "Could not copy automatically — copy it manually", "جارٍ التحليل…": "Parsing\u2026"};
+var HTML_EN={"#imp-note": "Paste your tasks in any shape close to the usual one — with or without blank lines between them, in a different order, with short field names (<span dir=\"ltr\">P/N · W/O · FB</span>), dates as <span dir=\"ltr\">6-7-2026</span>, <span dir=\"ltr\">6/7/2026</span> or <span dir=\"ltr\">2026-07-06</span>, and Arabic or Latin digits. The parsed tasks appear on the right — review them, then import.", "#ai-how": "<b>No key needed:</b> press “Copy prompt &amp; open Claude” → paste it into your Claude conversation (Ctrl+V) → copy the reply → paste it into the “Pasted text” box here → “Import new”.<br><b>Automatic:</b> the second button sends the text itself without leaving the page, but needs an Anthropic API key from “Settings” (entirely optional).", "#ai-note": "The pasted text is sent to <span dir=\"ltr\">api.anthropic.com</span> for Claude to read and split, and the result is shown for review before anything is added. The key is stored in this browser only (it never reaches GitHub or anyone else), and every run is billed to your own Anthropic account."};
+var HTML_AR={}, i18nText=[], i18nAttr=[], i18nReady=false;
+function tr(ar){ return LANG==="en" ? (EN[ar]||ar) : ar; }
+function taskWord(n){ return LANG==="en" ? (n===1?" task":" tasks") : " تاسك"; }
+var DAYS_AR=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+var DAYS_EN=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function i18nSnapshot(){
+  var skip={ list:1, "imp-out":1, "ex-out":1, toast:1 };
+  var w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode:function(n){
+      var el=n.parentElement;
+      while(el){ if(skip[el.id]) return NodeFilter.FILTER_REJECT; el=el.parentElement; }
+      return /[\u0600-\u06FF]/.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+  var n;
+  while((n=w.nextNode())) i18nText.push({ n:n, ar:n.nodeValue });
+  ["placeholder","title","aria-label"].forEach(function(a){
+    $$("["+a+"]").forEach(function(el){
+      var v=el.getAttribute(a);
+      if(/[\u0600-\u06FF]/.test(v)) i18nAttr.push({ el:el, a:a, ar:v });
+    });
+  });
+  Object.keys(HTML_EN).forEach(function(sel){
+    var el=$(sel); if(el) HTML_AR[sel]=el.innerHTML;
+  });
+  i18nReady=true;
+}
+function swap(v){
+  var k=v.trim();
+  if(!k || !EN[k]) return v;
+  return v.replace(k, EN[k]);
+}
+function applyLang(lang){
+  LANG = lang==="en" ? "en" : "ar";
+  if(!i18nReady) i18nSnapshot();
+  var root=document.documentElement;
+  root.setAttribute("lang", LANG);
+  root.setAttribute("dir", LANG==="en" ? "ltr" : "rtl");
+  document.title = LANG==="en" ? "Daily Task Log" : "سجل التاسكات اليومية";
+  i18nText.forEach(function(r){ r.n.nodeValue = LANG==="en" ? swap(r.ar) : r.ar; });
+  i18nAttr.forEach(function(r){ r.el.setAttribute(r.a, LANG==="en" ? swap(r.ar) : r.ar); });
+  Object.keys(HTML_AR).forEach(function(sel){
+    var el=$(sel); if(el) el.innerHTML = LANG==="en" ? HTML_EN[sel] : HTML_AR[sel];
+  });
+  $("#lang").textContent = LANG==="en" ? "ع" : "EN";
+  try{ localStorage.setItem(LANG_STORE, LANG); }catch(e){}
+  if(typeof render==="function"){ render(); buildExport(); previewImport(); aiRefresh(); }
+  if(editingId){ $("#form-title").textContent=tr("تعديل تاسك"); $("#submit-btn").textContent=tr("تحديث التاسك"); }
+  else { $("#form-title").textContent=tr("تسجيل تاسك جديد"); $("#submit-btn").textContent=tr("حفظ التاسك"); }
+}
+
 /* ---------- storage ---------- */
 function load(){
   try{ var raw=localStorage.getItem(KEY); tasks = raw?JSON.parse(raw):[]; }
@@ -589,7 +646,7 @@ function load(){
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(tasks)); }
-  catch(e){ toast("تعذّر الحفظ في المتصفح — خذ نسخة احتياطية"); }
+  catch(e){ toast(tr("تعذّر الحفظ في المتصفح — خذ نسخة احتياطية")); }
 }
 
 /* ---------- text rendering ---------- */
@@ -630,7 +687,7 @@ function pairRow(part,wo){
   d.className="pair";
   d.innerHTML='<input type="text" dir="ltr" class="p-part" placeholder="Part number">'+
               '<input type="text" dir="ltr" class="p-wo" placeholder="Work order">'+
-              '<button type="button" class="rm" title="حذف السطر" aria-label="حذف السطر">×</button>';
+              '<button type="button" class="rm" title="'+tr("حذف السطر")+'" aria-label="'+tr("حذف السطر")+'">×</button>';
   $(".p-part",d).value=part||"";
   $(".p-wo",d).value=wo||"";
   $(".rm",d).addEventListener("click",function(){
@@ -659,9 +716,9 @@ function setScope(s){
 function resetForm(){
   editingId=null;
   document.body.classList.remove("is-editing");
-  $("#form-title").textContent="تسجيل تاسك جديد";
+  $("#form-title").textContent=tr("تسجيل تاسك جديد");
   $("#form-hint").textContent="new entry";
-  $("#submit-btn").textContent="حفظ التاسك";
+  $("#submit-btn").textContent=tr("حفظ التاسك");
   setPairs(null); setScope("layers");
   $("#from").value=""; $("#to").value=""; $("#othertext").value="";
   $("#start").value=""; $("#stop").value=""; $("#note").value="";
@@ -670,9 +727,9 @@ function resetForm(){
 function fillForm(t){
   editingId=t.id;
   document.body.classList.add("is-editing");
-  $("#form-title").textContent="تعديل تاسك";
+  $("#form-title").textContent=tr("تعديل تاسك");
   $("#form-hint").textContent="editing";
-  $("#submit-btn").textContent="تحديث التاسك";
+  $("#submit-btn").textContent=tr("تحديث التاسك");
   setPairs(t.pairs); setScope(t.scope||"layers");
   $("#from").value=t.from||""; $("#to").value=t.to||""; $("#othertext").value=t.text||"";
   $("#date").value=t.date||""; $("#start").value=t.start||""; $("#stop").value=t.stop||"";
@@ -697,7 +754,7 @@ function render(){
   }
   var box=$("#list");
   if(!rows.length){
-    box.innerHTML='<div class="empty">'+(tasks.length?"لا نتائج مطابقة للبحث.":"لا توجد تاسكات بعد — سجّل أول تاسك من النموذج، أو استورد قائمتك الجاهزة من تبويب «استيراد».")+'</div>';
+    box.innerHTML='<div class="empty">'+(tasks.length?tr("لا نتائج مطابقة للبحث."):tr("لا توجد تاسكات بعد — سجّل أول تاسك من النموذج، أو استورد قائمتك الجاهزة من تبويب «استيراد»."))+'</div>';
     updateStats(); return;
   }
   var html="", curDate=null, buf=[], groups=[];
@@ -708,9 +765,9 @@ function render(){
   groups.forEach(function(g){
     var mins=g.items.reduce(function(a,t){return a+durMin(t);},0);
     html+='<div class="daygroup"><div class="dayhead'+(g.date?'':' undated')+'">'+
-          '<span class="d">'+(g.date?esc(fmtDate(g.date)):'بدون تاريخ')+'</span>'+
-          '<span class="w">'+(g.date?esc(weekday(g.date)):'أضف التاريخ ليدخل في التصدير')+'</span>'+
-          '<span class="t">'+esc(fmtDur(mins))+' · '+g.items.length+' تاسك</span></div>';
+          '<span class="d">'+(g.date?esc(fmtDate(g.date)):tr('بدون تاريخ'))+'</span>'+
+          '<span class="w">'+(g.date?esc(weekday(g.date)):tr('أضف التاريخ ليدخل في التصدير'))+'</span>'+
+          '<span class="t">'+esc(fmtDur(mins))+' · '+g.items.length+esc(taskWord(g.items.length))+'</span></div>';
     g.items.forEach(function(t){
       var pn="";
       (t.pairs||[]).forEach(function(p){
@@ -722,18 +779,18 @@ function render(){
       html+='<article class="task" data-id="'+esc(t.id)+'">'+
         '<div class="main">'+
           '<div class="pn">'+pn+'</div>'+
-          '<div class="scope">'+(scopeLine(t)?esc(scopeLine(t)):'<em>بدون وصف</em>')+'</div>'+
+          '<div class="scope">'+(scopeLine(t)?esc(scopeLine(t)):'<em>'+esc(tr("بدون وصف"))+'</em>')+'</div>'+
           '<div class="times">'+
             '<span>Start <b>'+esc(t.start||"—")+'</b></span>'+
             '<span>Stop <b>'+esc(t.stop||"—")+'</b></span>'+
-            (d?'<span>المدة <b>'+esc(fmtDur(d))+'</b></span>':'')+
+            (d?'<span>'+esc(tr("المدة"))+' <b>'+esc(fmtDur(d))+'</b></span>':'')+
           '</div>'+
           (t.note?'<span class="chip '+noteClass(t.note)+'">'+esc(t.note)+'</span>':'')+
         '</div>'+
         '<div class="rowbtns">'+
-          '<button type="button" data-act="edit" title="تعديل" aria-label="تعديل">✎</button>'+
-          '<button type="button" data-act="dup" title="تكرار" aria-label="تكرار">⧉</button>'+
-          '<button type="button" class="del" data-act="del" title="حذف" aria-label="حذف">🗑</button>'+
+          '<button type="button" data-act="edit" title="'+tr("تعديل")+'" aria-label="'+tr("تعديل")+'">✎</button>'+
+          '<button type="button" data-act="dup" title="'+tr("تكرار")+'" aria-label="'+tr("تكرار")+'">⧉</button>'+
+          '<button type="button" class="del" data-act="del" title="'+tr("حذف")+'" aria-label="'+tr("حذف")+'">🗑</button>'+
         '</div>'+
       '</article>';
     });
@@ -770,7 +827,7 @@ function buildExport(){
   $("#ex-days").textContent=Object.keys(days).length;
   $("#ex-hours").textContent=fmtDur(mins);
   var txt=rows.map(taskToText).join("\n\n");
-  $("#ex-out").textContent = txt || "لا توجد تاسكات ضمن هذه الفترة.";
+  $("#ex-out").textContent = txt || tr("لا توجد تاسكات ضمن هذه الفترة.");
   return txt;
 }
 function preset(kind){
@@ -800,7 +857,7 @@ function blobSave(name, content, type){
     var a=document.createElement("a");
     a.href=url; a.download=name; document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
-  }catch(e){ toast("التنزيل غير مدعوم هنا — استخدم زر النسخ"); }
+  }catch(e){ toast(tr("التنزيل غير مدعوم هنا — استخدم زر النسخ")); }
 }
 /* على claude.ai لا يستطيع الملف التنزيل مباشرة، فنستخدم واجهة الحفظ إن وُجدت */
 var saveReady=(function(){
@@ -815,11 +872,11 @@ function downloadFile(name, content, type){
   saveReady.then(function(ns){
     if(!ns || !ns.save){ blobSave(name, content, type); return; }
     ns.save({ filename:name, data:content }).then(
-      function(){ toast("تم حفظ الملف"); },
+      function(){ toast(tr("تم حفظ الملف")); },
       function(err){
         var c=err&&err.code;
         if(c==="declined") return;
-        if(c==="rate_limited"){ toast("انتظر لحظة ثم أعد المحاولة"); return; }
+        if(c==="rate_limited"){ toast(tr("انتظر لحظة ثم أعد المحاولة")); return; }
         blobSave(name, content, type);
       });
   });
@@ -1072,7 +1129,7 @@ function aiKey(){ return aiGet(AI_KEY_STORE,""); }
 function aiModel(){ return aiGet(AI_MODEL_STORE,"claude-opus-5"); }
 function aiRefresh(){
   var has=!!aiKey();
-  $("#ai-state").textContent = has ? aiModel() : "غير مفعّل";
+  $("#ai-state").textContent = has ? aiModel() : tr("غير مفعّل");
   $("#ai-key").value = has ? aiKey() : "";
   $("#ai-model").value = aiModel();
 }
@@ -1119,12 +1176,12 @@ function askClaude(text){
       if(!res.ok){
         var msg=raw.slice(0,300);
         try{ msg=JSON.parse(raw).error.message; }catch(e){}
-        if(res.status===401) msg="المفتاح غير صحيح أو منتهي";
-        if(res.status===429) msg="تجاوزت حد الطلبات — انتظر قليلاً";
+        if(res.status===401) msg=tr("المفتاح غير صحيح أو منتهي");
+        if(res.status===429) msg=tr("تجاوزت حد الطلبات — انتظر قليلاً");
         throw new Error("("+res.status+") "+msg);
       }
       var data=JSON.parse(raw);
-      if(data.stop_reason==="refusal") throw new Error("النموذج رفض معالجة هذا النص");
+      if(data.stop_reason==="refusal") throw new Error(tr("النموذج رفض معالجة هذا النص"));
       var txt=(data.content||[]).filter(function(b){ return b.type==="text"; })
               .map(function(b){ return b.text; }).join("");
       var out=JSON.parse(txt);
@@ -1133,6 +1190,35 @@ function askClaude(text){
   }).finally(function(){ clearTimeout(timer); });
 }
 function claudePrompt(text){
+  if(LANG==="en") return [
+    "Split the shift log below and rewrite it in exactly this shape, with nothing else around it:",
+    "",
+    "Part number: <part number>",
+    "Work order: <work order>",
+    "Layers: From <start> to <end>",
+    "Date: <d-m-yyyy>",
+    "Start <HH:MM>",
+    "Stop:<HH:MM>",
+    "<note, if any>",
+    "",
+    "Rules:",
+    "- One blank line between tasks. No numbering, no headings, no commentary.",
+    "- The third line is the work line: \"Layers: From X to Y\", or \"Final bag\", or \"Rebag\",",
+    "  or \"Layers: to X\" when only the end is recorded, or \"Layers: From X\" when only the start is.",
+    "- Source dates are day-first: 6/7/2026 means 6 July, and must be written as 6-7-2026.",
+    "- 24-hour times: 3:00 pm becomes 15:00, and 7:00 in the morning becomes 07:00.",
+    "- If a task carries several part numbers, repeat the Part number and Work order lines above the work line.",
+    "- Anything else (a delay, a quality hold, a remark) becomes the last line of that task, as written.",
+    "- Ignore any operator name line, and ignore \"last ply\": the end of the work is the finish layer.",
+    "- Every task must keep a Date line. If a task has no date, write: Date: ??? - never drop the line.",
+    "- If no stop time is recorded, omit the Stop line. Never invent a value.",
+    "- Reply in plain text only: no ```, no numbering, no bold, no preamble or closing remark.",
+    "",
+    "The log:",
+    "-----",
+    text.trim(),
+    "-----"
+  ].join("\n");
   return [
     "قسّم سجل التاسكات التالي وأعد كتابته بهذه الصيغة بالضبط، ولا تكتب أي شيء آخر معه:",
     "",
@@ -1177,40 +1263,40 @@ function copyText(txt){
 }
 function copyForClaude(){
   var raw=$("#imp").value;
-  if(!raw.trim()){ toast("الصق نصك في المربع أولاً"); return; }
+  if(!raw.trim()){ toast(tr("الصق نصك في المربع أولاً")); return; }
   copyText(claudePrompt(raw)).then(function(){
     var w=null;
     try{ w=window.open("https://claude.ai/new","_blank","noopener"); }catch(e){}
-    toast(w ? "تم نسخ الطلب — الصقه في Claude ثم أعد رده هنا"
-            : "تم نسخ الطلب — افتح claude.ai والصقه هناك");
+    toast(w ? tr("تم نسخ الطلب — الصقه في Claude ثم أعد رده هنا")
+            : tr("تم نسخ الطلب — افتح claude.ai والصقه هناك"));
   },function(){
-    toast("تعذّر النسخ تلقائياً — انسخ النص يدوياً");
+    toast(tr("تعذّر النسخ تلقائياً — انسخ النص يدوياً"));
   });
 }
 function runClaude(){
   var raw=$("#imp").value;
-  if(!raw.trim()){ toast("الصق النص أولاً"); return; }
+  if(!raw.trim()){ toast(tr("الصق النص أولاً")); return; }
   if(!aiKey()){
     $("#ai-settings").hidden=false; $("#ai-key").focus();
-    toast("أضف مفتاح Anthropic أولاً"); return;
+    toast(tr("أضف مفتاح Anthropic أولاً")); return;
   }
   if(aiBusy) return;
   aiBusy=true;
   var btn=$("#ai-run"), label=btn.innerHTML;
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span>جارٍ التحليل…';
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>'+esc(tr("جارٍ التحليل…"));
   askClaude(raw).then(function(r){
     if(!r.items.length){ toast("Claude لم يجد تاسكات في هذا النص"); return; }
     aiTasks=r.items;
     previewImport();
     var u=r.usage||{};
-    $("#imp-src").textContent="· تحليل Claude ("+(u.input_tokens||0)+" ← "+(u.output_tokens||0)+" tokens)";
-    toast("Claude قسّم "+r.items.length+" تاسك — راجعها ثم استورد");
+    $("#imp-src").textContent=tr("· تحليل Claude (")+(u.input_tokens||0)+" ← "+(u.output_tokens||0)+" tokens)";
+    toast(tr("Claude قسّم ")+r.items.length+tr(" تاسك — راجعها ثم استورد"));
   }).catch(function(err){
     var m=String(err&&err.message||err);
-    if(err&&err.name==="AbortError") m="انتهت مهلة الانتظار";
+    if(err&&err.name==="AbortError") m=tr("انتهت مهلة الانتظار");
     else if(/Failed to fetch|NetworkError|load failed/i.test(m))
-      m="الاتصال بـ Claude محجوب في هذه الصفحة — افتحها من رابط GitHub Pages";
-    toast("تعذّر التحليل: "+m);
+      m=tr("الاتصال بـ Claude محجوب في هذه الصفحة — افتحها من رابط GitHub Pages");
+    toast(tr("تعذّر التحليل: ")+m);
   }).finally(function(){
     aiBusy=false; btn.disabled=false; btn.innerHTML=label;
   });
@@ -1219,7 +1305,7 @@ function runClaude(){
 function previewImport(){
   var raw=$("#imp").value;
   var res = aiTasks ? { items:aiTasks, ignored:[] } : parseInput(raw);
-  if(!aiTasks) $("#imp-src").textContent="· تحليل محلي";
+  if(!aiTasks) $("#imp-src").textContent=tr("· تحليل محلي");
   var have={}; tasks.forEach(function(t){ have[taskKey(t)]=1; });
   var dup=0, undated=0, fresh=[];
   res.items.forEach(function(t){
@@ -1232,12 +1318,12 @@ function previewImport(){
   $("#imp-undated").textContent=undated;
   $("#imp-out").textContent = res.items.length
     ? res.items.slice().sort(sortAsc).map(function(t){
-        return (t.date ? "" : "⚠ بدون تاريخ — عدّله بعد الاستيراد\n") + taskToText(t);
+        return (t.date ? "" : tr("⚠ بدون تاريخ — عدّله بعد الاستيراد\n")) + taskToText(t);
       }).join("\n\n")
-    : (raw.trim() ? "لم يتم التعرف على أي تاسك في هذا النص." : "الصق النص وستظهر هنا التاسكات بعد تقسيمها.");
+    : (raw.trim() ? tr("لم يتم التعرف على أي تاسك في هذا النص.") : tr("الصق النص وستظهر هنا التاسكات بعد تقسيمها."));
   $("#imp-ignored").hidden = !res.ignored.length;
   $("#imp-ignored").textContent = res.ignored.length
-    ? "أسطر لم تُستخدم: " + res.ignored.slice(0,6).join(" · ") + (res.ignored.length>6?" …":"")
+    ? tr("أسطر لم تُستخدم: ") + res.ignored.slice(0,6).join(" · ") + (res.ignored.length>6?" …":"")
     : "";
   return { all:res.items, fresh:fresh, dup:dup, undated:undated };
 }
@@ -1253,7 +1339,7 @@ $$("#scope button").forEach(function(b){
 $("#form").addEventListener("submit",function(e){
   e.preventDefault();
   var date=$("#date").value;
-  if(!date){ toast("اكتب التاريخ أولاً"); $("#date").focus(); return; }
+  if(!date){ toast(tr("اكتب التاريخ أولاً")); $("#date").focus(); return; }
   var t={
     id: editingId||uid(),
     pairs: readPairs(),
@@ -1268,10 +1354,10 @@ $("#form").addEventListener("submit",function(e){
   };
   if(editingId){
     tasks=tasks.map(function(x){ return x.id===editingId?t:x; });
-    toast("تم تحديث التاسك");
+    toast(tr("تم تحديث التاسك"));
   }else{
     tasks.push(t);
-    toast("تم حفظ التاسك");
+    toast(tr("تم حفظ التاسك"));
   }
   save(); render(); buildExport();
   var keepDate=t.date;
@@ -1289,13 +1375,13 @@ $("#list").addEventListener("click",function(e){
   if(btn.dataset.act==="edit") fillForm(t);
   else if(btn.dataset.act==="dup"){
     var c=JSON.parse(JSON.stringify(t)); c.id=uid();
-    tasks.push(c); save(); render(); buildExport(); toast("تم تكرار التاسك");
+    tasks.push(c); save(); render(); buildExport(); toast(tr("تم تكرار التاسك"));
   }
   else if(btn.dataset.act==="del"){
-    if(!confirm("حذف هذا التاسك نهائياً؟")) return;
+    if(!confirm(tr("حذف هذا التاسك نهائياً؟"))) return;
     tasks=tasks.filter(function(x){return x.id!==id;});
     if(editingId===id) resetForm();
-    save(); render(); buildExport(); toast("تم الحذف");
+    save(); render(); buildExport(); toast(tr("تم الحذف"));
   }
 });
 $("#search").addEventListener("input", render);
@@ -1316,22 +1402,22 @@ $("#ex-to").addEventListener("change", buildExport);
 
 $("#copy").addEventListener("click",function(){
   var txt=buildExport();
-  if(!txt){ toast("لا يوجد نص للنسخ"); return; }
+  if(!txt){ toast(tr("لا يوجد نص للنسخ")); return; }
   function fallback(){
     var ta=document.createElement("textarea");
     ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
     document.body.appendChild(ta); ta.select();
-    try{ document.execCommand("copy"); toast("تم نسخ النص"); }
-    catch(e){ toast("انسخ النص يدوياً من المعاينة"); }
+    try{ document.execCommand("copy"); toast(tr("تم نسخ النص")); }
+    catch(e){ toast(tr("انسخ النص يدوياً من المعاينة")); }
     ta.remove();
   }
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(txt).then(function(){ toast("تم نسخ النص"); }, fallback);
+    navigator.clipboard.writeText(txt).then(function(){ toast(tr("تم نسخ النص")); }, fallback);
   } else fallback();
 });
 $("#download").addEventListener("click",function(){
   var txt=buildExport();
-  if(!txt){ toast("لا يوجد نص للتنزيل"); return; }
+  if(!txt){ toast(tr("لا يوجد نص للتنزيل")); return; }
   var a=$("#ex-from").value||"all", b=$("#ex-to").value||"all";
   downloadFile("tasks_"+a+"_"+b+".txt", txt);
 });
@@ -1353,22 +1439,22 @@ $("#ai-save").addEventListener("click",function(){
   aiSet(AI_KEY_STORE, $("#ai-key").value.trim());
   aiSet(AI_MODEL_STORE, $("#ai-model").value);
   aiRefresh();
-  toast($("#ai-key").value.trim() ? "تم حفظ الإعدادات في هذا المتصفح" : "تم حذف المفتاح");
+  toast($("#ai-key").value.trim() ? tr("تم حفظ الإعدادات في هذا المتصفح") : tr("تم حذف المفتاح"));
 });
 $("#ai-forget").addEventListener("click",function(){
-  aiSet(AI_KEY_STORE,""); $("#ai-key").value=""; aiRefresh(); toast("تم حذف المفتاح من المتصفح");
+  aiSet(AI_KEY_STORE,""); $("#ai-key").value=""; aiRefresh(); toast(tr("تم حذف المفتاح من المتصفح"));
 });
 $("#do-import").addEventListener("click",function(){
-  if(!$("#imp").value.trim()){ toast("الصق النص أولاً"); return; }
+  if(!$("#imp").value.trim()){ toast(tr("الصق النص أولاً")); return; }
   var res=previewImport();
-  if(!res.all.length){ toast("لم يتم التعرف على أي تاسك"); return; }
-  if(!res.fresh.length){ toast("كل التاسكات موجودة مسبقاً"); return; }
+  if(!res.all.length){ toast(tr("لم يتم التعرف على أي تاسك")); return; }
+  if(!res.fresh.length){ toast(tr("كل التاسكات موجودة مسبقاً")); return; }
   tasks=tasks.concat(res.fresh);
   save(); render(); buildExport();
   $("#imp").value=""; aiTasks=null; previewImport();
-  toast("تم استيراد "+res.fresh.length+" تاسك"+
-        (res.dup?" · تجاهلت "+res.dup+" مكرر":"")+
-        (res.undated?" · "+res.undated+" بدون تاريخ":""));
+  toast(tr("تم استيراد ")+res.fresh.length+tr(" تاسك")+
+        (res.dup?tr(" · تجاهلت ")+res.dup+tr(" مكرر"):"")+
+        (res.undated?" · "+res.undated+tr(" بدون تاريخ"):""));
   $$(".tabs button")[0].click();
 });
 $("#restore").addEventListener("click",function(){ $("#file").click(); });
@@ -1381,22 +1467,25 @@ $("#file").addEventListener("change",function(e){
       if(!Array.isArray(data)) throw new Error("bad");
       data.forEach(function(t){ if(!t.id) t.id=uid(); });
       tasks=data; save(); render(); buildExport();
-      toast("تمت استعادة "+data.length+" تاسك");
+      toast(tr("تمت استعادة ")+data.length+tr(" تاسك"));
       $$(".tabs button")[0].click();
-    }catch(err){ toast("الملف غير صالح"); }
+    }catch(err){ toast(tr("الملف غير صالح")); }
   };
   r.readAsText(f);
   e.target.value="";
 });
 function wipeAll(){
-  if(!tasks.length){ toast("السجل فارغ أصلاً"); return; }
-  if(!confirm("سيتم حذف كل التاسكات ("+tasks.length+") نهائياً، ولا يمكن التراجع.\n"+
-              "خذ نسخة احتياطية JSON أولاً إن أردت. متأكد؟")) return;
+  if(!tasks.length){ toast(tr("السجل فارغ أصلاً")); return; }
+  if(!confirm(tr("سيتم حذف كل التاسكات (")+tasks.length+tr(") نهائياً، ولا يمكن التراجع.\n")+
+              tr("خذ نسخة احتياطية JSON أولاً إن أردت. متأكد؟"))) return;
   tasks=[]; save(); resetForm(); $("#date").value=todayISO();
-  render(); buildExport(); previewImport(); toast("تم مسح السجل");
+  render(); buildExport(); previewImport(); toast(tr("تم مسح السجل"));
 }
 $("#wipe").addEventListener("click", wipeAll);
 $("#wipe-log").addEventListener("click", wipeAll);
+$("#lang").addEventListener("click",function(){
+  applyLang(LANG==="ar" ? "en" : "ar");
+});
 $("#theme").addEventListener("click",function(){
   var cur=document.documentElement.getAttribute("data-theme");
   var next = cur==="dark" ? "light" : cur==="light" ? "dark"
@@ -1417,6 +1506,9 @@ render();
 buildExport();
 aiRefresh();
 previewImport();
+var savedLang="ar";
+try{ savedLang=localStorage.getItem(LANG_STORE)||"ar"; }catch(e){}
+applyLang(savedLang);
 })();
 </script>
 </body>
